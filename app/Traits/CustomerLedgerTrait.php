@@ -4,7 +4,9 @@ namespace App\Traits;
 
 use App\Models\Customer;
 use App\Models\CustomerLedger;
-use App\Models\CustomerTransaction; // Assuming this is the second table
+use Illuminate\Http\Response;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Exception;
 
 trait CustomerLedgerTrait
 {
@@ -40,6 +42,21 @@ trait CustomerLedgerTrait
         $customer->save();
     }
 
+    public function deleteTransection($tran_id){    
+        try {
+            $resource = CustomerLedger::findOrFail($tran_id);
+            $customer_id=$resource->customer_id;
+            $resource->delete();
+            $resource->reCalculate($customer_id);
+            return response()->json(['status'=>'success','message' => 'Ledger Deleted Successfully']);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status'=>'error', 'message' => 'Ledger Not Found.'], Response::HTTP_NOT_FOUND);
+        } catch (Exception $e) {
+            return response()->json(['status'=>'error', 'message' => 'Something went wrong.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        } 
+    }
+
+
     /**
      * Update the customer's current balance directly.
      *
@@ -47,15 +64,18 @@ trait CustomerLedgerTrait
      * @param float $newBalance
      * @return void
      */
-    public function updateCurrentBalance($customerId, $newBalance)
+    public function updateTransaction($tranData)
     {
-        $customer = Customer::find($customerId);
-
-        if (!$customer) {
-            throw new \Exception("Customer not found");
-        }
-
-        $customer->current_balance = $newBalance;
-        $customer->save();
+        try {
+            $customer_ledger = CustomerLedger::findOrFail($tranData['id']);
+            $tranData['customer_id']=$customer_ledger->customer_id;
+            $customer_ledger->update($tranData);
+            $this->reCalculate($tranData['customer_id']);
+            return response()->json(['status'=>'success','message' => 'Ledger Updated Successfully']);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status'=>'error', 'message' => 'Ledger Not Found.'], Response::HTTP_NOT_FOUND);
+        } catch (Exception $e) {
+            return response()->json(['status'=>'error', 'message' => 'Something went wrong.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        } 
     }
 }

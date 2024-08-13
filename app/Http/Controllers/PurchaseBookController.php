@@ -141,11 +141,24 @@ class PurchaseBookController extends Controller
                 ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
+            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
+            'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
+            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_amount];
             
-            //add opening balance transection in ledger
-            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>$request->bank_id,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
-            'adv_amount'=>0.00,'cash_amount'=>$cash_amount,'payment_type'=>$request->payment_type,'cheque_amount'=>$cheque_amount,
-            'cheque_no'=>$request->cheque_no,'cheque_date'=>$request->cheque_date,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_amount];
+            if ($request->input('payment_type') == 'cheque') {
+                $transactionData['bank_id'] = $request->bank_id;
+                $transactionData['cheque_no']= $request->cheque_no;
+                $transactionData['cheque_date']= $request->cheque_date;
+                $transactionData['cheque_amount']= $cheque_amount;
+            }else if($request->input('payment_type') == 'cash'){
+                $transactionData['cash_amount']= $cash_amount;
+            }else{
+                $transactionData['bank_id'] = $request->bank_id;
+                $transactionData['cheque_no']= $request->cheque_no;
+                $transactionData['cheque_date']= $request->cheque_date;
+                $transactionData['cheque_amount']= $cheque_amount;
+                $transactionData['cash_amount']= $cash_amount;
+            }
             $res=$purchaseBook->addTransaction($transactionData);
             if(!$res){
                 DB::rollBack();
@@ -297,11 +310,23 @@ class PurchaseBookController extends Controller
             }
             $purchaseBook->ledger()->delete();
           
-            //add opening balance transection in ledger
-            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>$request->bank_id,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
-            'adv_amount'=>0.00,'cash_amount'=>$cash_amount,'payment_type'=>$request->payment_type,'cheque_amount'=>$cheque_amount,
-            'cheque_no'=>$request->cheque_no,'cheque_date'=>$request->cheque_date,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_amount];
-            
+            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
+            'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
+            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_amount];
+            if ($request->input('payment_type') == 'cheque') {
+                $transactionData['bank_id'] = $request->bank_id;
+                $transactionData['cheque_no']= $request->cheque_no;
+                $transactionData['cheque_date']= $request->cheque_date;
+                $transactionData['cheque_amount']= $cheque_amount;
+            }else if($request->input('payment_type') == 'cash'){
+                $transactionData['cash_amount']= $cash_amount;
+            }else{
+                $transactionData['bank_id'] = $request->bank_id;
+                $transactionData['cheque_no']= $request->cheque_no;
+                $transactionData['cheque_date']= $request->cheque_date;
+                $transactionData['cheque_amount']= $cheque_amount;
+                $transactionData['cash_amount']= $cash_amount;
+            }
             $res=$purchaseBook->addTransaction($transactionData);
             if(!$res){
                 DB::rollBack();

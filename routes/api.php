@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController};
+use App\Http\Controllers\{BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SupplierLedgerController};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -52,4 +52,7 @@ Route::post('/expense/{id}', [ExpenseController::class, 'update']);
 
 Route::apiResource('purchase_book', PurchaseBookController::class);
 Route::post('/purchase_book/{id}', [PurchaseBookController::class, 'update']);
+
+Route::apiResource('supplier_ledger', SupplierLedgerController::class);
+Route::post('/supplier_ledger/{id}', [SupplierLedgerController::class, 'update']);
 

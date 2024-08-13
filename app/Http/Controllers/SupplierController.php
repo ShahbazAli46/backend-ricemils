@@ -146,17 +146,12 @@ class SupplierController extends Controller
                 'description' => $request->input('description')
             ]);
 
-            // $customer->
-            //update opening balance transection in ledger
-            //  $transactionData=['customer_id'=>$customer->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>$openingBalance,'adv_amount'=>0.00,'cash_amount'=>$openingBalance,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr'];
-            //  $res=$customer->addTransaction($transactionData);
-            //  if(!$res){
-            //      DB::rollBack();
-            //      return response()->json([
-            //          'status' => 'error',
-            //          'message' => 'Something Went Wrong Please Try Again Later.',
-            //      ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
-            //  }
+            $opening_ledger=$customer->ledgers()->where('description','Opening Balance')->first();
+            if($opening_ledger){
+                //update opening balance transection in ledger
+                $transactionData=['id'=>$opening_ledger->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>$openingBalance,'adv_amount'=>0.00,'cash_amount'=>$openingBalance,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$openingBalance];
+                $res=$customer->updateTransaction($transactionData);
+            }
             DB::commit();
     
             return response()->json([
