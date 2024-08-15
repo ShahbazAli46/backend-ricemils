@@ -24,8 +24,6 @@ return new class extends Migration
             $table->string('packing_size',100);
             $table->string('packing_unit',50)->default('KG');
             $table->string('quantity',50);
-            $table->decimal('price', 15, 2)->default(0.00);
-            $table->decimal('total_amount', 15, 2)->default(0.00);
             $table->timestamps();   
         });
     }

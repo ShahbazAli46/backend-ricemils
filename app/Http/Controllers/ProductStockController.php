@@ -50,7 +50,6 @@ class ProductStockController extends Controller
             'packing_id.*' => ['required','exists:packings,id',new ExistsNotSoftDeleted('packings')],
             'product_description.*' => 'nullable|string',
             'quantity.*' => 'required|numeric|min:1',
-            'price.*' => 'required|numeric|min:1',
         ]);
         
         if ($validator->fails()) {
@@ -74,6 +73,7 @@ class ProductStockController extends Controller
             DB::beginTransaction();
 
             foreach ($productIds as $index => $productId) {
+                //add check here product type must be other
                 $product = Product::findOrFail($productId);
                 $packing = Packing::findOrFail($request->packing_id[$index]);
 
@@ -85,8 +85,6 @@ class ProductStockController extends Controller
                     'packing_size' => $packing->packing_size,
                     'packing_unit' => $packing->packing_unit,
                     'quantity' => $request->input('quantity')[$index],
-                    'price' => $request->input('price')[$index],
-                    'total_amount' => $request->input('price')[$index] * $request->input('quantity')[$index],
                 ]);
 
                 if (!$productStock) {
@@ -146,7 +144,6 @@ class ProductStockController extends Controller
             'packing_id' => ['required','exists:packings,id',new ExistsNotSoftDeleted('packings')],
             'product_description' => 'nullable|string',
             'quantity' => 'required|numeric|min:1',
-            'price' => 'required|numeric|min:1',
         ]);
         
         if ($validator->fails()) {
@@ -170,8 +167,6 @@ class ProductStockController extends Controller
                 'packing_size' => $packing->packing_size,
                 'packing_unit' => $packing->packing_unit,
                 'quantity' => $request->input('quantity'),
-                'price' => $request->input('price'),
-                'total_amount' => $request->input('price') * $request->input('quantity'),
             ]);
     
             return response()->json([

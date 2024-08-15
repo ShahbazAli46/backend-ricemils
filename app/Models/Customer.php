@@ -32,6 +32,11 @@ class Customer extends Model
         return $this->hasMany(PurchaseBook::class, 'sup_id');
     }
 
+    public function saleBooks()
+    {
+        return $this->hasMany(SaleBook::class, 'buyer_id');
+    }
+
     /**
      * Get the customers that have this customer as a reference.
      */

@@ -11,7 +11,7 @@ class ProductStock extends Model
     public $table="product_stocks";
 
     protected $fillable = [
-        'product_id', 'packing_id','product_name','product_description','packing_size','packing_unit','quantity','price','total_amount'
+        'product_id', 'packing_id','product_name','product_description','packing_size','packing_unit','quantity'
     ];
     
     public function product()

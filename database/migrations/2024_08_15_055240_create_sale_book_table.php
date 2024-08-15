@@ -13,25 +13,22 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('customer_ledgers', function (Blueprint $table) {
+        Schema::create('sale_book', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('customer_id');
-            $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
+            $table->string('ref_no',50)->nullable();
+            $table->unsignedBigInteger('buyer_id');
+            $table->foreign('buyer_id')->references('id')->on('customers')->onDelete('cascade');
+            $table->string('truck_no',50)->nullable();
+            $table->date('date')->default(DB::raw('CURRENT_DATE'));
             $table->unsignedBigInteger('bank_id')->nullable();
             $table->foreign('bank_id')->references('id')->on('banks')->onDelete('cascade');
-            $table->text('description')->nullable();
-            $table->decimal('dr_amount', 15, 2)->default(0.00);
-            $table->decimal('cr_amount', 15, 2)->default(0.00);
-            $table->decimal('adv_amount', 15, 2)->default(0.00);
+            $table->decimal('total_amount', 15, 2)->default(0.00);
+            $table->enum('payment_type',['cash','cheque','both']);
             $table->decimal('cash_amount', 15, 2)->default(0.00);
-            $table->enum('payment_type',['cash','cheque','both'])->nullable();
             $table->decimal('cheque_amount', 15, 2)->default(0.00);
             $table->string('cheque_no',100)->nullable();
             $table->date('cheque_date')->nullable();
-            $table->enum('customer_type',['supplier','buyer']);
-            $table->unsignedBigInteger('book_id')->nullable();
-            $table->enum('entry_type',['dr','cr','adv','dr&cr']);
-            $table->decimal('balance', 15, 2)->default(0.00);
+            $table->decimal('rem_amount', 15, 2)->default(0.00);
             $table->timestamps();
         });
     }
@@ -43,6 +40,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('customer_ledgers');
+        Schema::dropIfExists('sale_book');
     }
 };
