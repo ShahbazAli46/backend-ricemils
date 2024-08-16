@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('sale_book_detail', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('sale_book_id');
-            $table->foreign('sale_book_id')->references('id')->on('sale_book')->onDelete('cascade');
+            // $table->foreign('sale_book_id')->references('id')->on('sale_book')->onDelete('cascade');
             $table->unsignedBigInteger('pro_id');
             $table->foreign('pro_id')->references('id')->on('products')->onDelete('cascade');
             $table->unsignedBigInteger('packing_id');
@@ -30,6 +30,7 @@ return new class extends Migration
             $table->string('quantity',50);
             $table->decimal('price', 15, 2)->default(0.00);
             $table->decimal('total_amount', 15, 2)->default(0.00);
+            $table->enum('order_status',['cart','completed'])->default('cart');
             $table->timestamps();
         });
     }

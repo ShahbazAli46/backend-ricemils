@@ -9,6 +9,7 @@ use Illuminate\Http\Response;
 use Exception;
 use Illuminate\Support\Facades\Validator;
 use App\Rules\ExistsNotSoftDeleted;
+use Illuminate\Support\Facades\DB;
 
 class BuyerController extends Controller
 {
@@ -50,6 +51,7 @@ class BuyerController extends Controller
         }
         
         try {
+            DB::beginTransaction();
             $openingBalance = is_numeric($request->opening_balance)?$request->opening_balance:0.00;
             $customer = Customer::create([
                 'person_name' => $request->input('person_name'),
@@ -61,12 +63,24 @@ class BuyerController extends Controller
                 'description' => $request->input('description'),
                 'customer_type' => 'buyer'
             ]);
-    
+
+            //add opening balance transection in ledger
+            $transactionData=['customer_id'=>$customer->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>$openingBalance,'adv_amount'=>0.00,'cash_amount'=>$openingBalance,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>null,'entry_type'=>'cr','balance'=>$openingBalance];
+            $res=$customer->addTransaction($transactionData);
+            if(!$res){
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Something Went Wrong Please Try Again Later.',
+                ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+            DB::commit();
             return response()->json([
                 'status' => 'success',
                 'message' => 'Buyer Created Successfully.',
             ], Response::HTTP_CREATED); // 201 Created
         } catch (Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to Create Buyer. ' . $e->getMessage(),

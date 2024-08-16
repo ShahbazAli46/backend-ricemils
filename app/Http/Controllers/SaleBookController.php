@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Packing;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\SaleBook;
@@ -17,6 +18,210 @@ use Illuminate\Support\Facades\DB;
 
 class SaleBookController extends Controller
 {
+    public function getNextRefNo(){
+        $saleBook=SaleBook::where('order_status','cart')->first();
+        if($saleBook){
+            return response()->json(['next_id'=>$saleBook->id,'next_ref_no' => $saleBook->ref_no]);
+        }else{
+            $nextId = DB::select("SHOW TABLE STATUS LIKE 'sale_book'");
+            $nextId = $nextId[0]->Auto_increment;
+            $next_ref_no = 'SB-' . str_pad($nextId, 5, '0', STR_PAD_LEFT);
+            return response()->json(['next_id'=>$nextId,'next_ref_no' => $next_ref_no]);
+        }
+    }
+
+    public function AddItem(Request $request){
+        $rules = [
+            'id' => ['required','numeric'],
+            'buyer_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
+            'truck_no' => 'nullable|string|max:50',
+            'pro_id' => ['required','exists:products,id'],
+            'packing_id' => ['required','exists:packings,id'],
+            'price' => 'required|numeric|min:1',
+            'quantity' => 'required|numeric|min:1',
+            'product_description' => 'nullable|string',
+        ];        
+
+        $validator = Validator::make($request->all(), $rules);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+            ],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
+        }
+
+        try {
+            $nextRes=$this->getNextRefNo();
+            if($request->id!=$nextRes->original['next_id']){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ref Id is Invalid.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            DB::beginTransaction();
+
+            // Validate buyer existence
+            $buyer = Customer::where(['id' => $request->buyer_id, 'customer_type' => 'buyer'])->first();
+            if (!$buyer) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Buyer Does Not Exist.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        
+            // Validate product existence
+            $product = Product::where(['id' => $request->pro_id, 'product_type' => 'other'])->firstOrFail();
+            if (!$product) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Product Type Is Not Valid.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        
+            // Validate packing
+            $packing = Packing::find($request->packing_id);
+            $productStock = ProductStock::where([
+                'product_id' => $product->id,
+                'packing_id' => $packing->id,
+            ])->first();
+        
+            if ($productStock->quantity < $request->quantity) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Product ' . $product->product_name . ' Out of Stock.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        
+            // Create or update SaleBook
+            $saleBook = SaleBook::updateOrCreate(
+                [
+                    'id' => $request->id,
+                    // 'order_status' => 'cart',
+                ],
+                [
+                    'buyer_id' => $request->buyer_id, // use buyer_id here
+                    'truck_no' => $request->truck_no,
+                ]
+            );
+        
+            // Ensure SaleBook was created or found
+            if (!$saleBook) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to Add Sale Order.',
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+           
+            // Create or update SaleBookDetail
+            $saleBookDetail = SaleBookDetail::updateOrCreate(
+                [
+                    'sale_book_id' => $saleBook->id,
+                    'pro_id' => $request->pro_id,
+                    'packing_id' => $request->packing_id,
+                    'pro_stock_id' => $productStock->id,
+                ],
+                [
+                    'product_name' => $product->product_name,
+                    'product_description' => $product->product_description,
+                    'packing_size' => $packing->packing_size,
+                    'packing_unit' => $packing->packing_unit,
+                    'quantity' => $request->quantity,
+                    'price' => $request->price,
+                    'total_amount' => ($request->quantity * $request->price),
+                ]
+            );
+            
+            // Check if SaleBookDetail was created or updated
+            if (!$saleBookDetail) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to Add Item on Sale Order.',
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+        
+            // Recalculate and update total amount of SaleBook
+            $totalAmount = SaleBookDetail::where('sale_book_id', $saleBook->id)
+                ->sum('total_amount');
+            $saleBook->total_amount = $totalAmount;
+            $saleBook->save();
+
+            $saleBookObj = SaleBook::with(['details'])->find($request->id);
+
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Item Successfully Added to Sale Order.',
+                'data' => $saleBookObj,
+            ], Response::HTTP_CREATED);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to Add Sale Order. ' . $e->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+        }
+
+    }
+
+    public function RemoveItem($id){
+        try {
+            DB::beginTransaction();
+            $saleBookDetail=SaleBookDetail::where(['id'=>$id,'order_status'=>'cart'])->first();
+            if($saleBookDetail){
+                $sale_book_id=$saleBookDetail->sale_book_id;
+                $saleBookDetail->delete();
+    
+                $saleBook = SaleBook::with(['details'])->find($sale_book_id);
+    
+                // Recalculate and update total amount of SaleBook
+                $totalAmount = SaleBookDetail::where('sale_book_id', $sale_book_id)->sum('total_amount');
+                $saleBook->total_amount = $totalAmount;
+                $saleBook->save();
+                
+                DB::commit();
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Item Removed Successfully.',
+                    'data' => $saleBook,
+                ], Response::HTTP_CREATED);
+            }else{
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Sale Book Detail Does Not Exist.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to Add Sale Order. ' . $e->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+        }
+    }
+
+    public function ClearItems($id){
+        $saleBook = SaleBook::with(['details'])->where(['id'=>$id,'order_status'=>'cart'])->first();
+        if($saleBook){
+            SaleBookDetail::where(['sale_book_id'=>$saleBook->id,'order_status'=>'cart'])->delete();
+            $saleBook->total_amount = 0.00;
+            $saleBook->save();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Cart Clear Successfully.',
+            ], Response::HTTP_CREATED);
+        }else{
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sale Book Does Not Exist.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -45,41 +250,10 @@ class SaleBookController extends Controller
     public function store(Request $request)
     {
         $rules = [
-            'buyer_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
-            'truck_no' => 'nullable|string|max:50',
-            'date' => 'nullable|date',
-            'payment_type' => 'required|in:cash,cheque,both',
-
-            'pro_stock_id' => ['required', 'array'],
-            'pro_stock_id.*' => ['required','exists:product_stocks,id'],
-
-            'product_description' => ['nullable', 'array'],
-            'product_description.*' => 'nullable|string',
-
-            'quantity' => ['required', 'array'],
-            'quantity.*' => 'required|numeric|min:1',
-
-            'price' => ['required', 'array'],
-            'price.*' => 'required|numeric|min:1',
-        ];        
-
-        if ($request->input('payment_type') == 'cheque') {
-            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
-            $rules['cheque_no']= 'required|string|max:100';
-            $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|min:1';
-        }else if($request->input('payment_type') == 'cash'){
-            $rules['cash_amount']= 'required|numeric|min:1';
-        }else{
-            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
-            $rules['cheque_no']= 'required|string|max:100';
-            $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|min:1';
-            $rules['cash_amount']= 'required|numeric|min:1';
-        }
+            'sale_book_id' => ['required','exists:sale_book,id'],
+        ];  
 
         $validator = Validator::make($request->all(), $rules);
-        
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
@@ -88,156 +262,78 @@ class SaleBookController extends Controller
         }
 
         try {
-            $buyer=Customer::where(['id'=>$request->buyer_id,'customer_type'=>'buyer'])->first();
-            if(!$buyer){
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Buyer Does Not Exist.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
-            }
-
-            //sale book detail
-            $proStockID = $request->input('pro_stock_id', []);
-            $productDescription = $request->input('product_description', []);
-            $quantity = $request->input('quantity', []);
-            $price = $request->input('price', []);
-            
-            $maxIndex = max(count($proStockID),count($productDescription),count($quantity),count($price));
-            $isProductExist=false;
-            $total_amount=0;
-
-            for ($i = 0; $i < $maxIndex; $i++) {
-                if (!empty($proStockID[$i]) && !empty($quantity[$i])  && !empty($price[$i])) {
-                    $productStock=ProductStock::find($proStockID[$i]);
-                    
-                    $product=Product::where(['id'=>$productStock->product_id,'product_type'=>'other'])->firstOrFail();
-                    if($product){
-                        if($productStock->quantity<$quantity[$i]){
-                            return response()->json([
-                                'status' => 'error',
-                                'message' => 'Product '.$product->product_name.' Out of Stock.',
-                            ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
-                        }
-                    }else{
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => 'Product Does Not Exist.',
-                        ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
-                    }
-
-                    $isProductExist=true;
-                    $total_amount+=($price[$i] * $quantity[$i]);
+            $saleBook=SaleBook::with(['details'])->where(['id'=>$request->sale_book_id,'order_status'=>'cart'])->first();
+            if($saleBook){
+                if($saleBook->details()->count()<=0){
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Sale Book Cart is Empty.',
+                    ], Response::HTTP_UNPROCESSABLE_ENTITY);
                 }
-            }
-
-            if(!$isProductExist){
+                
+                $saleBook->order_status='completed';
+                $saleBook->save();
+                $saleBook->details()->update(['order_status' => 'completed']);
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'You Must Add at Least One Product.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
-            }
-
-            // Start a transaction
-            DB::beginTransaction();
-            $add_amount=0;
-            $cash_amount= ($request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
-            $cheque_amount= ($request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
-            
-            $add_amount+= ($cash_amount+$cheque_amount);
-            $rem_amount=$add_amount-$total_amount;
-
-            $saleBook = SaleBook::create([
-                'buyer_id' => $request->buyer_id,
-                'truck_no' => $request->truck_no,
-                'date' => $request->date,
-                'payment_type' => $request->payment_type,
-                'bank_id' => $request->bank_id,
-                'cash_amount' => $cash_amount,
-                'cheque_amount' => $cheque_amount,
-                'cheque_no' => $request->cheque_no,
-                'cheque_date' => $request->cheque_date,
-                'total_amount' => $total_amount,
-                'rem_amount' => $rem_amount,
-            ]);
-
-            if (!$saleBook) {
-                DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Failed to Add Sale Order.',
-                ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
-            }
-
-            //manage sale book detail 
-            for ($i = 0; $i < $maxIndex; $i++) {
-                if (!empty($proStockID[$i]) && !empty($quantity[$i])  && !empty($price[$i])) {
-                    $productStock=ProductStock::with(['product','packing'])->find($proStockID[$i]);
-                    $saleBookDetail = SaleBookDetail::create([
-                        'sale_book_id' => $saleBook->id,
-                        'pro_id' => $productStock->product_id,
-                        'packing_id' => $productStock->packing_id,
-                        'pro_stock_id' => $productStock->id,
-                        'product_name' => $productStock->product->product_name,
-                        'product_description' => $productStock->product->product_description,
-                        'packing_size' => $productStock->packing->packing_size,
-                        'packing_unit' => $productStock->packing->packing_unit,
-                        'quantity' => $quantity[$i],
-                        'price' => $price[$i],
-                        'total_amount' => ($quantity[$i] * $price[$i])
-                    ]);
-                    if(!$saleBookDetail){
-                        DB::rollBack();
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => 'Something Went Wrong Please Try Again Later.',
-                        ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
-                    }
-                    $productStock->update([
-                        'quantity'=>($productStock->quantity-$quantity[$i])
-                    ]);
-                }
-            }
-
-
-            $transactionData=['customer_id'=>$request->buyer_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
-            'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>$saleBook->id,'entry_type'=>'dr&cr','balance'=>$rem_amount];
-            
-            if ($request->input('payment_type') == 'cheque') {
-                $transactionData['bank_id'] = $request->bank_id;
-                $transactionData['cheque_no']= $request->cheque_no;
-                $transactionData['cheque_date']= $request->cheque_date;
-                $transactionData['cheque_amount']= $cheque_amount;
-            }else if($request->input('payment_type') == 'cash'){
-                $transactionData['cash_amount']= $cash_amount;
+                    'status' => 'success',
+                    'message' => 'Order Completed Successfully.',
+                ], Response::HTTP_CREATED);
             }else{
-                $transactionData['bank_id'] = $request->bank_id;
-                $transactionData['cheque_no']= $request->cheque_no;
-                $transactionData['cheque_date']= $request->cheque_date;
-                $transactionData['cheque_amount']= $cheque_amount;
-                $transactionData['cash_amount']= $cash_amount;
-            }
-            $res=$saleBook->addTransaction($transactionData);
-            if(!$res){
-                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Something Went Wrong Please Try Again Later.',
-                ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                    'message' => 'Sale Book Does Not Exist.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
-
-            // Commit the transaction
-            DB::commit();
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Sale Order Added Successfully.',
-            ], Response::HTTP_CREATED); // 201 Created
         } catch (Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to Add Sale Order. ' . $e->getMessage(),
             ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        try {
+            $sale_book = SaleBook::with(['details','buyer:id,person_name'])->findOrFail($id);
+            return response()->json(['data' => $sale_book]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status'=>'error', 'message' => 'Sale Order Not Found.'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        // try {
+        //     $resource = SaleBook::with(['details'])->findOrFail($id);
+        //     foreach($resource->details as $sale_detail){
+        //         $productStock=ProductStock::where(['product_id'=>$sale_detail->pro_id,'packing_id'=>$sale_detail->packing_id])->first();
+        //         if($productStock){
+        //             $productStock->update(['quantity'=>($productStock->quantity+$sale_detail->quantity)]);
+        //         }
+        //     }
+
+        //     $sup_id=$resource->sup_id;
+        //     $resource->delete();
+        //     $resource->reCalculate($sup_id);
+
+        //     return response()->json(['status'=>'success','message' => 'Purchase Order Deleted Successfully']);
+        // } catch (ModelNotFoundException $e) {
+        //     return response()->json(['status'=>'error', 'message' => 'Purchase Order Not Found.'], Response::HTTP_NOT_FOUND);
+        // } catch (Exception $e) {
+        //     return response()->json(['status'=>'error', 'message' => 'Something went wrong.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        // } 
     }
 }

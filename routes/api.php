@@ -54,7 +54,14 @@ Route::middleware('auth:sanctum')->group( function () {
     
     Route::apiResource('supplier_ledger', SupplierLedgerController::class);
     Route::post('/supplier_ledger/{id}', [SupplierLedgerController::class, 'update']);
+
+    Route::get('/sale_book/get_next_ref_no', [SaleBookController::class, 'getNextRefNo']);
+    Route::post('/sale_book/add_item', [SaleBookController::class, 'AddItem']);
+    Route::get('/sale_book/remove_item/{id}', [SaleBookController::class, 'RemoveItem']);
+    Route::get('/sale_book/clear_items/{id}', [SaleBookController::class, 'ClearItems']);
+
+    Route::apiResource('sale_book', SaleBookController::class);
+    Route::post('/sale_book/{id}', [SaleBookController::class, 'update']);
 });
 
-Route::apiResource('sale_book', SaleBookController::class);
-Route::post('/sale_book/{id}', [SaleBookController::class, 'update']);
+

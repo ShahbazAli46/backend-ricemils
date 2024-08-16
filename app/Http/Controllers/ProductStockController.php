@@ -76,7 +76,15 @@ class ProductStockController extends Controller
                 //add check here product type must be other
                 $product = Product::findOrFail($productId);
                 $packing = Packing::findOrFail($request->packing_id[$index]);
-
+                $isStockExist=ProductStock::where(['product_id'=>$productId,'packing_id'=>$packing->id])->first();
+                if($isStockExist){
+                    DB::rollBack();
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Product Already Exist in Stock, But You Can Edit Your Stock.',
+                    ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                }
+                
                 $productStock = ProductStock::create([
                     'product_id' => $productId,
                     'packing_id' => $packing->id,

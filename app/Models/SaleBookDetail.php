@@ -17,6 +17,6 @@ class SaleBookDetail extends Model
 
     public function saleBook()
     {
-        return $this->belongsTo(SaleBook::class);
+        return $this->belongsTo(SaleBook::class,'sale_book_id');
     }
 }

@@ -13,12 +13,11 @@ class SaleBook extends Model
 
     protected $fillable = [
        'ref_no','buyer_id','truck_no', 'bank_id','packing_type','date','total_amount',
-       'payment_type','cash_amount','cheque_amount','cheque_no','cheque_date','rem_amount'
     ];
 
     public function details()
     {
-        return $this->hasMany(SaleBookDetail::class);
+        return $this->hasMany(SaleBookDetail::class,'sale_book_id');
     }
 
     // Define the relationship with the Product model
