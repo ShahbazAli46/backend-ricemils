@@ -60,11 +60,11 @@ trait CustomerLedgerTrait
         try {
             $resource = CustomerLedger::findOrFail($tran_id);
             $customer_id=$resource->customer_id;
-            $lastBlnc=$resource->balance;
             $ledgerId=$resource->id;
+            $lastLedger = CustomerLedger::where('customer_id', $customer_id)->where('id', '<', $ledgerId)->orderBy('id', 'desc')->first();
             $resource->delete();
 
-            $resource->reCalculateTranBlnc($customer_id, $ledgerId,$lastBlnc);
+            $resource->reCalculateTranBlnc($customer_id, $lastLedger->id,$lastLedger->balance);
             $resource->reCalculateCrntBlnc($customer_id);
             return response()->json(['status'=>'success','message' => 'Ledger Deleted Successfully']);
         } catch (ModelNotFoundException $e) {

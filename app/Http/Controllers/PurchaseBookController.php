@@ -84,6 +84,7 @@ class PurchaseBookController extends Controller
         }
 
         try {
+            $payment_type=$request->input('payment_type');
             $supplier=Customer::where(['id'=>$request->sup_id,'customer_type'=>'supplier'])->first();
             if(!$supplier){
                 return response()->json([
@@ -104,9 +105,9 @@ class PurchaseBookController extends Controller
             DB::beginTransaction();
             $total_amount=$request->input('price')* $request->input('quantity');
             $add_amount=0;
-            $cash_amount= ($request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
-            $cheque_amount= ($request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
-            
+            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
+
             $lastLedger = $supplier->ledgers()->orderBy('id', 'desc')->first();
             $previousBalance=0.00;
             if($lastLedger){
@@ -262,6 +263,7 @@ class PurchaseBookController extends Controller
         }
 
         try {
+            $payment_type=$request->input('payment_type');
             $purchaseBook = PurchaseBook::findOrFail($id);
 
             $supplier=Customer::where(['id'=>$request->sup_id,'customer_type'=>'supplier'])->first();
@@ -285,8 +287,8 @@ class PurchaseBookController extends Controller
 
             $total_amount=$request->input('price')* $request->input('quantity');
             $add_amount=0;
-            $cash_amount= ($request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
-            $cheque_amount= ($request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
+            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $add_amount+= ($cash_amount+$cheque_amount);
 
             $lastLedger = $supplier->ledgers()->where('book_id', $id)->orderBy('id', 'desc')->first();
@@ -386,12 +388,9 @@ class PurchaseBookController extends Controller
         try {
             $resource = PurchaseBook::findOrFail($id);
             $sup_id=$resource->sup_id;
+            $customer_ledger=CustomerLedger::where('book_id',$resource->id)->first();
             $resource->delete();
-
-            $customer_ledger=CustomerLedger::find($resource->id);
-            $this->reCalculateTranBlnc($sup_id, $customer_ledger->id,$customer_ledger->balance);
-            $this->reCalculateCrntBlnc($sup_id);
-
+            $resource->deleteTransection($customer_ledger->id);
             return response()->json(['status'=>'success','message' => 'Purchase Order Deleted Successfully']);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Purchase Order Not Found.'], Response::HTTP_NOT_FOUND);

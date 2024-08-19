@@ -90,6 +90,7 @@ class SupplierLedgerController extends Controller
         }
         
         try {
+            $payment_type=$request->input('payment_type');
             $supplier=Customer::where(['id'=>$request->sup_id,'customer_type'=>'supplier'])->first();
             if(!$supplier){
                 return response()->json([
@@ -99,9 +100,8 @@ class SupplierLedgerController extends Controller
             }
 
             $add_amount=0;
-            $cash_amount= ($request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
-            $cheque_amount= ($request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
-            
+            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $add_amount+= ($cash_amount+$cheque_amount);
 
             $lastLedger = $supplier->ledgers()->orderBy('id', 'desc')->first();
@@ -212,15 +212,14 @@ class SupplierLedgerController extends Controller
         }
         
         try {
-            $supplier_ledger = CustomerLedger::where('customer_type','supplier')->where('id',$id)->firstOrFail();
+            $payment_type=$request->input('payment_type');
+            $supplier_ledger = CustomerLedger::where('customer_type','supplier')->where('id',$id)->where('description','!=','Opening Balance')->firstOrFail();
            
             $add_amount=0;
-            $cash_amount= ($request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
-            $cheque_amount= ($request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
+            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $add_amount+= ($cash_amount+$cheque_amount);
-
-            $lastLedger = CustomerLedger::where('customer_id', $supplier_ledger->customer_id)
-            ->where('customer_type', 'supplier')->orderBy('id', 'desc')->first();
+            $lastLedger = CustomerLedger::where('customer_id', $supplier_ledger->customer_id)->where('id', '<', $id)->orderBy('id', 'desc')->first();
             
             $previousBalance=0;
             if($lastLedger){
