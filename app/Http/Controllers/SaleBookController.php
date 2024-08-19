@@ -85,7 +85,14 @@ class SaleBookController extends Controller
                 'product_id' => $product->id,
                 'packing_id' => $packing->id,
             ])->first();
-        
+
+            if(!$productStock){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Product Stock is Empty.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);  
+            }
+
             if ($productStock->quantity < $request->quantity) {
                 return response()->json([
                     'status' => 'error',
@@ -262,6 +269,8 @@ class SaleBookController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+
             $saleBook=SaleBook::with(['details'])->where(['id'=>$request->sale_book_id,'order_status'=>'cart'])->first();
             if($saleBook){
                 if($saleBook->details()->count()<=0){
@@ -270,15 +279,31 @@ class SaleBookController extends Controller
                         'message' => 'Sale Book Cart is Empty.',
                     ], Response::HTTP_UNPROCESSABLE_ENTITY);
                 }
-                
+
                 $saleBook->order_status='completed';
                 $saleBook->save();
                 $saleBook->details()->update(['order_status' => 'completed']);
+
+                $transactionData=['customer_id'=>$saleBook->buyer_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$saleBook->total_amount,'cr_amount'=>0.00,
+                'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>'Cash','cheque_amount'=>0.00,
+                'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>$saleBook->id,'entry_type'=>'dr','balance'=>$saleBook->total_amount];
+                
+                $res=$saleBook->addTransaction($transactionData);
+                if(!$res){
+                    DB::rollBack();
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Something Went Wrong Please Try Again Later.',
+                    ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                }
+
+                DB::commit();
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Order Completed Successfully.',
                 ], Response::HTTP_CREATED);
             }else{
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Sale Book Does Not Exist.',

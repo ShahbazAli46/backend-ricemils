@@ -64,8 +64,18 @@ class SupplierController extends Controller
                 'customer_type' => 'supplier'
             ]);
 
-            //add opening balance transection in ledger
-            $transactionData=['customer_id'=>$customer->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>$openingBalance,'adv_amount'=>0.00,'cash_amount'=>$openingBalance,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$openingBalance];
+            //if Opening Balance is pos+ then we will pay
+            //if Opening Balance is neg- then we are advance paid
+            $transactionData=['customer_id'=>$customer->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>0.00,'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'balance'=>$openingBalance];
+            if($openingBalance>=1){
+                $transactionData['dr_amount']=$openingBalance;
+                $transactionData['entry_type']='dr';
+            }else{
+                $transactionData['cr_amount']=$openingBalance;
+                $transactionData['cash_amount']=$openingBalance;
+                $transactionData['entry_type']='cr';
+            }
+
             $res=$customer->addTransaction($transactionData);
             if(!$res){
                 DB::rollBack();
@@ -134,24 +144,37 @@ class SupplierController extends Controller
              // Find the customer by ID
             $customer = Customer::where('customer_type','supplier')->where('id',$id)->firstOrFail();
             DB::beginTransaction();
-           
-            $openingBalance = is_numeric($request->opening_balance)?$request->opening_balance:0.00;
-            $customer->update([
+            $update_arr=[
                 'person_name' => $request->input('person_name'),
                 'refference_id' => $request->input('refference_id'),
                 'contact' => $request->input('contact'),
                 'address' => $request->input('address'),
                 'firm_name' => $request->input('firm_name'),
-                'opening_balance' => $openingBalance,
                 'description' => $request->input('description')
-            ]);
+            ];
+            
+            if($request->filled('opening_balance') && $customer->opening_balance!=$request->opening_balance){
+                $openingBalance = is_numeric($request->opening_balance)?$request->opening_balance:0.00;
+                $update_arr['opening_balance'] = $openingBalance;
 
-            $opening_ledger=$customer->ledgers()->where('description','Opening Balance')->first();
-            if($opening_ledger){
-                //update opening balance transection in ledger
-                $transactionData=['id'=>$opening_ledger->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>$openingBalance,'adv_amount'=>0.00,'cash_amount'=>$openingBalance,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$openingBalance];
-                $res=$customer->updateTransaction($transactionData);
+                $opening_ledger=$customer->ledgers()->where('description','Opening Balance')->first();
+                if($opening_ledger){
+                    //update opening balance transection in ledger
+                    $transactionData=['id'=>$opening_ledger->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>0.00,'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'balance'=>$openingBalance];
+                    if($openingBalance>=1){
+                        $transactionData['dr_amount']=$openingBalance;
+                        $transactionData['entry_type']='dr';
+                    }else{
+                        $transactionData['cr_amount']=$openingBalance;
+                        $transactionData['cash_amount']=$openingBalance;
+                        $transactionData['entry_type']='cr';
+                    }
+                    $res=$customer->updateTransaction($transactionData);
+                }
             }
+
+            $customer->update($update_arr);
+
             DB::commit();
     
             return response()->json([

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CustomerLedger;
 use App\Models\Product;
 use App\Models\PurchaseBook;
 use Illuminate\Http\Request;
@@ -106,8 +107,20 @@ class PurchaseBookController extends Controller
             $cash_amount= ($request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= ($request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             
+            $lastLedger = $supplier->ledgers()->orderBy('id', 'desc')->first();
+            $previousBalance=0.00;
+            if($lastLedger){
+                $previousBalance=$lastLedger->balance;
+            }else{
+                $previousBalance=$supplier->opening_balance;
+            }
+
             $add_amount+= ($cash_amount+$cheque_amount);
-            $rem_amount=$add_amount-$total_amount;
+
+
+            $totalWithPreBlnc=$previousBalance+$total_amount;
+            $rem_amount=$total_amount-$add_amount;
+            $rem_blnc_amount=$totalWithPreBlnc-$add_amount;
 
             $purchaseBook = PurchaseBook::create([
                 'sup_id' => $request->sup_id,
@@ -143,7 +156,7 @@ class PurchaseBookController extends Controller
 
             $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_amount];
+            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_blnc_amount];
             
             if ($request->input('payment_type') == 'cheque') {
                 $transactionData['bank_id'] = $request->bank_id;
@@ -274,9 +287,19 @@ class PurchaseBookController extends Controller
             $add_amount=0;
             $cash_amount= ($request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= ($request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
-            
             $add_amount+= ($cash_amount+$cheque_amount);
-            $rem_amount=$add_amount-$total_amount;
+
+            $lastLedger = $supplier->ledgers()->where('book_id', $id)->orderBy('id', 'desc')->first();
+            $currentLedger = $supplier->ledgers()->where('book_id', $id)->first();
+
+            $previousBalance=0.00;
+            if($lastLedger){
+                $previousBalance=$lastLedger->balance;
+            }
+
+            $totalWithPreBlnc=$previousBalance+$total_amount;
+            $rem_amount=$total_amount-$add_amount;
+            $rem_blnc_amount=$totalWithPreBlnc-$add_amount;
 
             $purchaseBook->update([
                 'sup_id' => $request->sup_id,
@@ -308,11 +331,11 @@ class PurchaseBookController extends Controller
                     'message' => 'Failed to Update Purchase Order.',
                 ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
-            $purchaseBook->ledger()->delete();
-          
-            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
+
+            $transactionData=['id'=>$currentLedger->id,'bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_amount];
+            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_blnc_amount];
+            
             if ($request->input('payment_type') == 'cheque') {
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
@@ -327,7 +350,8 @@ class PurchaseBookController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
                 $transactionData['cash_amount']= $cash_amount;
             }
-            $res=$purchaseBook->addTransaction($transactionData);
+            $res=$purchaseBook->updateTransaction($transactionData);
+          
             if(!$res){
                 DB::rollBack();
                 return response()->json([
@@ -363,7 +387,10 @@ class PurchaseBookController extends Controller
             $resource = PurchaseBook::findOrFail($id);
             $sup_id=$resource->sup_id;
             $resource->delete();
-            $resource->reCalculate($sup_id);
+
+            $customer_ledger=CustomerLedger::find($resource->id);
+            $this->reCalculateTranBlnc($sup_id, $customer_ledger->id,$customer_ledger->balance);
+            $this->reCalculateCrntBlnc($sup_id);
 
             return response()->json(['status'=>'success','message' => 'Purchase Order Deleted Successfully']);
         } catch (ModelNotFoundException $e) {

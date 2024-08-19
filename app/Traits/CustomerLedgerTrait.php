@@ -31,23 +31,41 @@ trait CustomerLedgerTrait
             return 0;
         }
         CustomerLedger::create($tranData);
-        $this->reCalculate($tranData['customer_id']);
+        $this->reCalculateCrntBlnc($tranData['customer_id']);
         return 1;
     }
 
-    public function reCalculate($customer_id){
+    public function reCalculateCrntBlnc($customer_id){
         $customer = Customer::find($customer_id);
-        $current_blanace=$customer->ledgers()->sum('balance');
-        $customer->current_balance=$current_blanace;
-        $customer->save();
+        $lastLedger = $customer->ledgers()->orderBy('id', 'desc')->first();
+        if ($lastLedger) {
+            $customer->current_balance = $lastLedger->balance;
+            $customer->save();
+        }
+    }
+    
+    public function reCalculateTranBlnc($customerId, $startingLedgerId,$previousBalance)
+    {
+        // Get all transactions for this customer after the specified ledger entry
+        $transactions = CustomerLedger::where('customer_id', $customerId)->where('id', '>', $startingLedgerId)->orderBy('id', 'asc')->get();
+        foreach ($transactions as $transaction) {
+            $newBalance = $previousBalance + ($transaction->dr_amount - $transaction->cr_amount);
+            $transaction->balance = $newBalance;
+            $transaction->save();
+            $previousBalance = $newBalance;
+        }
     }
 
     public function deleteTransection($tran_id){    
         try {
             $resource = CustomerLedger::findOrFail($tran_id);
             $customer_id=$resource->customer_id;
+            $lastBlnc=$resource->balance;
+            $ledgerId=$resource->id;
             $resource->delete();
-            $resource->reCalculate($customer_id);
+
+            $resource->reCalculateTranBlnc($customer_id, $ledgerId,$lastBlnc);
+            $resource->reCalculateCrntBlnc($customer_id);
             return response()->json(['status'=>'success','message' => 'Ledger Deleted Successfully']);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Ledger Not Found.'], Response::HTTP_NOT_FOUND);
@@ -70,7 +88,8 @@ trait CustomerLedgerTrait
             $customer_ledger = CustomerLedger::findOrFail($tranData['id']);
             $tranData['customer_id']=$customer_ledger->customer_id;
             $customer_ledger->update($tranData);
-            $this->reCalculate($tranData['customer_id']);
+            $this->reCalculateTranBlnc($tranData['customer_id'], $customer_ledger->id,$customer_ledger->balance);
+            $this->reCalculateCrntBlnc($tranData['customer_id']);
             return response()->json(['status'=>'success','message' => 'Ledger Updated Successfully']);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Ledger Not Found.'], Response::HTTP_NOT_FOUND);

@@ -104,11 +104,20 @@ class SupplierLedgerController extends Controller
             
             $add_amount+= ($cash_amount+$cheque_amount);
 
+            $lastLedger = $supplier->ledgers()->orderBy('id', 'desc')->first();
+            $previousBalance=0.00;
+            if($lastLedger){
+                $previousBalance=$lastLedger->balance;
+            }else{
+                $previousBalance=$supplier->opening_balance;
+            }
+            $rem_blnc_amount=$previousBalance-$add_amount;
+
             DB::beginTransaction();
 
             $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$add_amount];
+            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
             
             if ($request->input('payment_type') == 'cheque') {
                 $transactionData['bank_id'] = $request->bank_id;
@@ -210,11 +219,21 @@ class SupplierLedgerController extends Controller
             $cheque_amount= ($request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $add_amount+= ($cash_amount+$cheque_amount);
 
+            $lastLedger = CustomerLedger::where('customer_id', $supplier_ledger->customer_id)
+            ->where('customer_type', 'supplier')->orderBy('id', 'desc')->first();
+            
+            $previousBalance=0;
+            if($lastLedger){
+                $previousBalance=$lastLedger->balance;
+            }
+
+            $rem_blnc_amount=$previousBalance-$add_amount;
+
             DB::beginTransaction();
             
             $transactionData=['id'=>$supplier_ledger->id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$add_amount];
+            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
            
             if ($request->input('payment_type') == 'cheque') {
                 $transactionData['bank_id'] = $request->bank_id;
@@ -259,7 +278,7 @@ class SupplierLedgerController extends Controller
     public function destroy($id)
     {
         try {
-            $resource = CustomerLedger::where('customer_type','supplier')->where('id',$id)->firstOrFail();
+            $resource = CustomerLedger::where('customer_type','supplier')->where('id',$id)->where('description','!=','Opening Balance')->firstOrFail();
             $res=$resource->deleteTransection($id);
             return response()->json($res->original);
         } catch (ModelNotFoundException $e) {
