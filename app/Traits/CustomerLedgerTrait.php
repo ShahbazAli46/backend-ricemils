@@ -19,9 +19,7 @@ trait CustomerLedgerTrait
      * @param array $transactionData (optional) Additional data for the transaction
      * @return void
      */
-    // $transactionData=['customer_id'=>$customer->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,
-    // 'cr_amount'=>$openingBalance,'adv_amount'=>0.00,'cash_amount'=>$openingBalance,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr'];
-
+   
     public function addTransaction($tranData)
     {
         // Find the customer by ID

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController};
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -36,7 +36,6 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::apiResource('bank', BankController::class);
     Route::post('/bank/{id}', [BankController::class, 'update']);
     
-    
     Route::apiResource('expense_category', ExpenseCategoryController::class);
     Route::post('/expense_category/{id}', [ExpenseCategoryController::class, 'update']);
     
@@ -62,6 +61,9 @@ Route::middleware('auth:sanctum')->group( function () {
 
     Route::apiResource('sale_book', SaleBookController::class);
     Route::post('/sale_book/{id}', [SaleBookController::class, 'update']);
+
+    Route::apiResource('buyer_ledger', BuyerLedgerController::class);
+    Route::post('/buyer_ledger/{id}', [BuyerLedgerController::class, 'update']);
 });
 
 

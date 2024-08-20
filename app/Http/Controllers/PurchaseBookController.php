@@ -387,7 +387,6 @@ class PurchaseBookController extends Controller
     {
         try {
             $resource = PurchaseBook::findOrFail($id);
-            $sup_id=$resource->sup_id;
             $customer_ledger=CustomerLedger::where('book_id',$resource->id)->first();
             $resource->delete();
             $resource->deleteTransection($customer_ledger->id);

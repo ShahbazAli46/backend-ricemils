@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CustomerLedger;
 use App\Models\Packing;
 use App\Models\Product;
 use App\Models\ProductStock;
@@ -284,9 +285,20 @@ class SaleBookController extends Controller
                 $saleBook->save();
                 $saleBook->details()->update(['order_status' => 'completed']);
 
+                $buyer=Customer::find($saleBook->buyer_id);
+                $lastLedger = $buyer->ledgers()->orderBy('id', 'desc')->first();
+                
+                $previousBalance=0.00;
+                if($lastLedger){
+                    $previousBalance=$lastLedger->balance;
+                }else{
+                    $previousBalance=$buyer->opening_balance;
+                }
+                $totalWithPreBlnc=$previousBalance+$saleBook->total_amount;
+
                 $transactionData=['customer_id'=>$saleBook->buyer_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$saleBook->total_amount,'cr_amount'=>0.00,
                 'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>'Cash','cheque_amount'=>0.00,
-                'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>$saleBook->id,'entry_type'=>'dr','balance'=>$saleBook->total_amount];
+                'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>$saleBook->id,'entry_type'=>'dr','balance'=>$totalWithPreBlnc];
                 
                 $res=$saleBook->addTransaction($transactionData);
                 if(!$res){
@@ -310,6 +322,7 @@ class SaleBookController extends Controller
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
         } catch (Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to Add Sale Order. ' . $e->getMessage(),
@@ -341,24 +354,29 @@ class SaleBookController extends Controller
      */
     public function destroy($id)
     {
-        // try {
-        //     $resource = SaleBook::with(['details'])->findOrFail($id);
-        //     foreach($resource->details as $sale_detail){
-        //         $productStock=ProductStock::where(['product_id'=>$sale_detail->pro_id,'packing_id'=>$sale_detail->packing_id])->first();
-        //         if($productStock){
-        //             $productStock->update(['quantity'=>($productStock->quantity+$sale_detail->quantity)]);
-        //         }
-        //     }
+        try {
+            DB::beginTransaction();
 
-        //     $sup_id=$resource->sup_id;
-        //     $resource->delete();
-        //     $resource->reCalculate($sup_id);
+            $resource = SaleBook::with(['details'])->findOrFail($id);
+            foreach($resource->details as $sale_detail){
+                $productStock=ProductStock::where(['product_id'=>$sale_detail->pro_id,'packing_id'=>$sale_detail->packing_id])->first();
+                if($productStock){
+                    $productStock->update(['quantity'=>($productStock->quantity+$sale_detail->quantity)]);
+                }
+            }
 
-        //     return response()->json(['status'=>'success','message' => 'Purchase Order Deleted Successfully']);
-        // } catch (ModelNotFoundException $e) {
-        //     return response()->json(['status'=>'error', 'message' => 'Purchase Order Not Found.'], Response::HTTP_NOT_FOUND);
-        // } catch (Exception $e) {
-        //     return response()->json(['status'=>'error', 'message' => 'Something went wrong.'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        // } 
+            $customer_ledger=CustomerLedger::where('book_id',$resource->id)->first();
+            $resource->delete();
+            $resource->deleteTransection($customer_ledger->id);
+
+            DB::commit();
+            return response()->json(['status'=>'success','message' => 'Sale Order Deleted Successfully']);
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json(['status'=>'error', 'message' => 'Sale Order Not Found.'], Response::HTTP_NOT_FOUND);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['status'=>'error', 'message' => 'Something went wrong.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        } 
     }
 }
