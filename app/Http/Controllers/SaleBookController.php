@@ -366,9 +366,9 @@ class SaleBookController extends Controller
             }
 
             $customer_ledger=CustomerLedger::where('book_id',$resource->id)->first();
+            $resource->details()->delete();
             $resource->delete();
             $resource->deleteTransection($customer_ledger->id);
-
             DB::commit();
             return response()->json(['status'=>'success','message' => 'Sale Order Deleted Successfully']);
         } catch (ModelNotFoundException $e) {

@@ -22,4 +22,9 @@ class Bank extends Model
     {
         return $this->hasMany(Expense::class);
     }
+
+    public function advanceCheques()
+    {
+        return $this->hasMany(AdvanceCheque::class);
+    }
 }

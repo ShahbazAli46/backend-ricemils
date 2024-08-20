@@ -1,7 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController};
-use Illuminate\Http\Request;
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,11 +38,11 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::apiResource('expense_category', ExpenseCategoryController::class);
     Route::post('/expense_category/{id}', [ExpenseCategoryController::class, 'update']);
     
-    Route::apiResource('payment_in', PaymentInFlowController::class);
-    Route::post('/payment_in/{id}', [PaymentInFlowController::class, 'update']);
+    // Route::apiResource('payment_in', PaymentInFlowController::class);
+    // Route::post('/payment_in/{id}', [PaymentInFlowController::class, 'update']);
     
-    Route::apiResource('payment_out', PaymentOutFlowController::class);
-    Route::post('/payment_out/{id}', [PaymentOutFlowController::class, 'update']);
+    // Route::apiResource('payment_out', PaymentOutFlowController::class);
+    // Route::post('/payment_out/{id}', [PaymentOutFlowController::class, 'update']);
     
     Route::apiResource('expense', ExpenseController::class);
     Route::post('/expense/{id}', [ExpenseController::class, 'update']);
@@ -64,6 +63,11 @@ Route::middleware('auth:sanctum')->group( function () {
 
     Route::apiResource('buyer_ledger', BuyerLedgerController::class);
     Route::post('/buyer_ledger/{id}', [BuyerLedgerController::class, 'update']);
+
+    Route::apiResource('advance_cheque', AdvanceChequeController::class);
+    Route::post('/advance_cheque/{id}', [AdvanceChequeController::class, 'update']);
+    Route::get('/advance_cheque/is_deferred/{id}/{value}', [AdvanceChequeController::class, 'changeStatus'])->where('value', '0|1');;
+
 });
 
 
