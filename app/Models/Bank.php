@@ -13,11 +13,6 @@ class Bank extends Model
     
     protected $fillable = ['bank_name'];
 
-    public function payments()
-    {
-        return $this->hasMany(PaymentFlow::class);
-    }
-
     public function expense()
     {
         return $this->hasMany(Expense::class);

@@ -50,8 +50,4 @@ class Customer extends Model
         return $this->hasMany(Customer::class, 'refference_id');
     }
 
-    public function payments()
-    {
-        return $this->hasMany(PaymentFlow::class);
-    }
 }
