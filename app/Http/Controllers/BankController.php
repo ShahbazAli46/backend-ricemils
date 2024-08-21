@@ -19,7 +19,7 @@ class BankController extends Controller
      */
     public function index()
     {
-        $banks=Bank::all();
+        $banks=Bank::withCount('advanceCheques')->withSum('advanceCheques', 'cheque_amount')->get();
         return response()->json(['data' => $banks]);
     }
 
@@ -68,7 +68,7 @@ class BankController extends Controller
     public function show($id)
     {
         try {
-            $bank = Bank::findOrFail($id);
+            $bank = Bank::withCount('advanceCheques')->withSum('advanceCheques', 'cheque_amount')->with(['advanceCheques.customer:id,person_name',])->findOrFail($id);
             return response()->json(['data' => $bank]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Bank Not Found.'], Response::HTTP_NOT_FOUND);
