@@ -12,7 +12,7 @@ class PurchaseBook extends Model
     public $table="purchase_book";
 
     protected $fillable = [
-       'serial_no', 'sup_id','pro_id', 'bank_id','quantity','price','truck_no','packing_type',
+       'serial_no', 'sup_id','pro_id', 'bank_id','quantity','price','freight','truck_no','packing_type',
         'date','total_amount','payment_type','first_weight','second_weight','net_weight','packing_weight','final_weight',
         'cash_amount','cheque_amount','cheque_no','cheque_date','rem_amount'
     ];

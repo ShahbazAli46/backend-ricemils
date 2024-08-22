@@ -48,6 +48,7 @@ class PurchaseBookController extends Controller
             'pro_id' => ['required','exists:products,id',new ExistsNotSoftDeleted('products')],
             'quantity' => 'required|numeric|min:1',
             'price' => 'required|numeric|min:1',
+            'freight' => 'required|numeric|min:0',
             'truck_no' => 'nullable|string|max:50',
             'packing_type' => 'required|in:add,return,paid',
             'date' => 'nullable|date',
@@ -65,7 +66,7 @@ class PurchaseBookController extends Controller
             $rules['cheque_date']= 'required|date';
             $rules['cheque_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'cash'){
-            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['cash_amount']= 'required|numeric|min:0';
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -103,7 +104,7 @@ class PurchaseBookController extends Controller
 
             // Start a transaction
             DB::beginTransaction();
-            $total_amount=$request->input('price')* $request->input('quantity');
+            $total_amount=($request->input('price')* $request->input('quantity'))+$request->input('freight');
             $add_amount=0;
             $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
@@ -130,13 +131,14 @@ class PurchaseBookController extends Controller
                 'price' => $request->price,
                 'truck_no' => $request->truck_no,
                 'packing_type' => $request->packing_type,
-                'date' => $request->date,
+                'date' => $request->input('date', now()),
                 'payment_type' => $request->payment_type,
                 'bank_id' => $request->bank_id,
                 'cash_amount' => $cash_amount,
                 'cheque_amount' => $cheque_amount,
                 'cheque_no' => $request->cheque_no,
                 'cheque_date' => $request->cheque_date,
+                'freight' => $request->freight,
                 'total_amount' => $total_amount,
                 'rem_amount' => $rem_amount,
                 'first_weight' => $request->first_weight,
@@ -145,7 +147,6 @@ class PurchaseBookController extends Controller
                 'packing_weight' => $request->packing_weight,
                 'final_weight' => $request->final_weight,
             ]);
-
 
             if (!$purchaseBook) {
                 DB::rollBack();
@@ -227,6 +228,7 @@ class PurchaseBookController extends Controller
             'pro_id' => ['required','exists:products,id',new ExistsNotSoftDeleted('products')],
             'quantity' => 'required|numeric|min:1',
             'price' => 'required|numeric|min:1',
+            'freight' => 'required|numeric|min:0',
             'truck_no' => 'nullable|string|max:50',
             'packing_type' => 'required|in:add,return,paid',
             'date' => 'nullable|date',
@@ -284,8 +286,7 @@ class PurchaseBookController extends Controller
 
             // Start a transaction
             DB::beginTransaction();
-
-            $total_amount=$request->input('price')* $request->input('quantity');
+            $total_amount=($request->input('price')* $request->input('quantity'))+$request->input('freight');
             $add_amount=0;
             $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
@@ -310,13 +311,14 @@ class PurchaseBookController extends Controller
                 'price' => $request->price,
                 'truck_no' => $request->truck_no,
                 'packing_type' => $request->packing_type,
-                'date' => $request->date,
+                'date' => $request->input('date', now()),
                 'payment_type' => $request->payment_type,
                 'bank_id' => $request->bank_id,
                 'cash_amount' => $cash_amount,
                 'cheque_amount' => $cheque_amount,
                 'cheque_no' => $request->cheque_no,
                 'cheque_date' => $request->cheque_date,
+                'freight' => $request->freight,
                 'total_amount' => $total_amount,
                 'rem_amount' => $rem_amount,
                 'first_weight' => $request->first_weight,
