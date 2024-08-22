@@ -19,8 +19,8 @@ class ExpenseCategoryController extends Controller
      */
     public function index()
     {
-        $expense_categories=ExpenseCategory::all();
-        return response()->json(['data' => $expense_categories]);
+        $expense_categories = ExpenseCategory::withSum('expenses', 'total_amount')->get();
+        return response()->json(['data' => $expense_categories]); 
     }
 
     /**
@@ -65,11 +65,26 @@ class ExpenseCategoryController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show(Request $request,$id)
     {
         try {
-            $expense_category = ExpenseCategory::findOrFail($id);
-            return response()->json(['data' => $expense_category]);
+            if($request->has('start_date') && $request->has('end_date')){
+                $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+                
+                $expense_category = ExpenseCategory::where('id', $id)
+                ->with(['expenses' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                }])
+                ->withSum(['expenses' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                }], 'total_amount')
+                ->firstOrFail(); 
+                return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $expense_category]);
+            }else{
+                $expense_category = ExpenseCategory::withSum('expenses', 'total_amount')->with(['expenses'])->findOrFail($id);
+                return response()->json(['data' => $expense_category]);
+            }
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Expense Category Not Found.'], Response::HTTP_NOT_FOUND);
         }

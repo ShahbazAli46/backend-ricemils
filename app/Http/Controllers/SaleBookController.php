@@ -238,13 +238,13 @@ class SaleBookController extends Controller
     public function index(Request $request)
     {
         if($request->has('start_date') && $request->has('end_date')){
-            $startDate = $request->input('start_date');
-            $endDate = $request->input('end_date');
+            $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
             $sale_book = SaleBook::with(['details','buyer:id,person_name'])->whereBetween('date', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $sale_book]);
         }else{
-            $sale_book=SaleBook::with(['details','supplier:id,person_name'])->get();
+            $sale_book=SaleBook::with(['details','buyer:id,person_name'])->get();
             return response()->json(['data' => $sale_book]);
         }
     }

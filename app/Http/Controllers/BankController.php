@@ -65,11 +65,28 @@ class BankController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show(Request $request,$id)
     {
         try {
-            $bank = Bank::withCount('advanceCheques')->withSum('advanceCheques', 'cheque_amount')->with(['advanceCheques.customer:id,person_name',])->findOrFail($id);
-            return response()->json(['data' => $bank]);
+            if($request->has('start_date') && $request->has('end_date')){
+                $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+                $bank = Bank::where('id', $id)
+                ->withCount(['advanceCheques' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                }])
+                ->with(['advanceCheques' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate])
+                        ->with('customer:id,person_name');  // Eager load the customer with specific fields
+                }])
+                ->withSum(['advanceCheques' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                }], 'cheque_amount')->firstOrFail(); 
+                return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $bank]);
+            }else{
+                $bank = Bank::withCount('advanceCheques')->withSum('advanceCheques', 'cheque_amount')->with(['advanceCheques.customer:id,person_name',])->findOrFail($id);
+                return response()->json(['data' => $bank]);
+            }
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Bank Not Found.'], Response::HTTP_NOT_FOUND);
         }

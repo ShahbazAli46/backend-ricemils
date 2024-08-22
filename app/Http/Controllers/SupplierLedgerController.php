@@ -39,8 +39,8 @@ class SupplierLedgerController extends Controller
             }
         }else{
             if($request->has('start_date') && $request->has('end_date')){
-                $startDate = $request->input('start_date');
-                $endDate = $request->input('end_date');
+                $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
     
                 $supplier_ledger = CustomerLedger::with(['customer:id,person_name'])->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $supplier_ledger]);

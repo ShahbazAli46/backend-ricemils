@@ -22,4 +22,11 @@ class Bank extends Model
     {
         return $this->hasMany(AdvanceCheque::class);
     }
+
+    public function getAdvanceChequesSumChequeAmountAttribute()
+    {
+        // Return 0.00 if the sum is null
+        return $this->attributes['advance_cheques_sum_cheque_amount'] ?? 0.00;
+    }
+    
 }

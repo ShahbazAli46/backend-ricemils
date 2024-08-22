@@ -23,8 +23,8 @@ class ProductStockController extends Controller
     public function index(Request $request)
     {
         if($request->has('start_date') && $request->has('end_date')){
-            $startDate = $request->input('start_date');
-            $endDate = $request->input('end_date');
+            $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
             $product_stock = ProductStock::whereBetween('created_at', [$startDate, $endDate])->get();
             // with(['product:id,product_name','packing:id,packing_size,packing_unit'])->

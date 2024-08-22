@@ -17,4 +17,10 @@ class ExpenseCategory extends Model
     {
         return $this->hasMany(Expense::class);
     }
+
+    public function getExpensesSumTotalAmountAttribute()
+    {
+        // Return 0.00 if the sum is null
+        return $this->attributes['expenses_sum_total_amount'] ?? 0.00;
+    }
 }
