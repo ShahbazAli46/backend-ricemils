@@ -104,7 +104,7 @@ class PurchaseBookController extends Controller
 
             // Start a transaction
             DB::beginTransaction();
-            $total_amount=($request->input('price')* $request->input('quantity'))+$request->input('freight');
+            $total_amount=($request->input('price')* $request->input('quantity'));
             $add_amount=0;
             $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
@@ -286,7 +286,7 @@ class PurchaseBookController extends Controller
 
             // Start a transaction
             DB::beginTransaction();
-            $total_amount=($request->input('price')* $request->input('quantity'))+$request->input('freight');
+            $total_amount=($request->input('price')* $request->input('quantity'));
             $add_amount=0;
             $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
