@@ -6,7 +6,6 @@ use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Packing;
 use App\Models\Product;
-use App\Models\ProductStock;
 use App\Models\SaleBook;
 use App\Models\SaleBookDetail;
 use Illuminate\Http\Request;
@@ -37,9 +36,8 @@ class SaleBookController extends Controller
             'buyer_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
             'truck_no' => 'nullable|string|max:50',
             'pro_id' => ['required','exists:products,id'],
-            'packing_id' => ['required','exists:packings,id'],
-            'price' => 'required|numeric|min:1',
-            'quantity' => 'required|numeric|min:1',
+            'price_mann' => 'required|numeric|min:1',
+            'weight' => 'required|numeric|min:1',
             'product_description' => 'nullable|string',
         ];        
 
@@ -80,27 +78,6 @@ class SaleBookController extends Controller
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
         
-            // Validate packing
-            $packing = Packing::find($request->packing_id);
-            $productStock = ProductStock::where([
-                'product_id' => $product->id,
-                'packing_id' => $packing->id,
-            ])->first();
-
-            if(!$productStock){
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Product Stock is Empty.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);  
-            }
-
-            if ($productStock->quantity < $request->quantity) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Product ' . $product->product_name . ' Out of Stock.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
-        
             // Create or update SaleBook
             $saleBook = SaleBook::updateOrCreate(
                 [
@@ -121,23 +98,20 @@ class SaleBookController extends Controller
                     'message' => 'Failed to Add Sale Order.',
                 ], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
-           
+            $price = ($request->price_mann * $request->weight) / 40;
             // Create or update SaleBookDetail
             $saleBookDetail = SaleBookDetail::updateOrCreate(
                 [
                     'sale_book_id' => $saleBook->id,
                     'pro_id' => $request->pro_id,
-                    'packing_id' => $request->packing_id,
-                    'pro_stock_id' => $productStock->id,
                 ],
                 [
                     'product_name' => $product->product_name,
                     'product_description' => $product->product_description,
-                    'packing_size' => $packing->packing_size,
-                    'packing_unit' => $packing->packing_unit,
-                    'quantity' => $request->quantity,
-                    'price' => $request->price,
-                    'total_amount' => ($request->quantity * $request->price),
+                    'price_mann' => $request->price_mann,
+                    'weight' => $request->weight,
+                    'price' => $price,
+                    'total_amount' => $price,
                 ]
             );
             
@@ -151,8 +125,7 @@ class SaleBookController extends Controller
             }
         
             // Recalculate and update total amount of SaleBook
-            $totalAmount = SaleBookDetail::where('sale_book_id', $saleBook->id)
-                ->sum('total_amount');
+            $totalAmount = SaleBookDetail::where('sale_book_id', $saleBook->id)->sum('total_amount');
             $saleBook->total_amount = $totalAmount;
             $saleBook->save();
 
@@ -356,15 +329,7 @@ class SaleBookController extends Controller
     {
         try {
             DB::beginTransaction();
-
             $resource = SaleBook::with(['details'])->findOrFail($id);
-            foreach($resource->details as $sale_detail){
-                $productStock=ProductStock::where(['product_id'=>$sale_detail->pro_id,'packing_id'=>$sale_detail->packing_id])->first();
-                if($productStock){
-                    $productStock->update(['quantity'=>($productStock->quantity+$sale_detail->quantity)]);
-                }
-            }
-
             $customer_ledger=CustomerLedger::where('book_id',$resource->id)->first();
             $resource->details()->delete();
             $resource->delete();
