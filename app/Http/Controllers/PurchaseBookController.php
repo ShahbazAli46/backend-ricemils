@@ -307,7 +307,10 @@ class PurchaseBookController extends Controller
             $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
 
-            $lastLedger = $supplier->ledgers()->where('book_id', $id)->orderBy('id', 'desc')->first();
+            $lastLedger = $supplier->ledgers()
+            ->where('id', '<', function ($query) use ($id) {
+                $query->select('id')->from('customer_ledgers')->where('book_id', $id)->orderBy('id', 'desc')->limit(1);
+            })->orderBy('id', 'desc')->first(); 
             $currentLedger = $supplier->ledgers()->where('book_id', $id)->first();
            
             $previousBalance=0.00;
