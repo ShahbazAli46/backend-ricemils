@@ -46,19 +46,20 @@ class PurchaseBookController extends Controller
         $rules = [
             'sup_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
             'pro_id' => ['required','exists:products,id',new ExistsNotSoftDeleted('products')],
-            'quantity' => 'required|numeric|min:1',
-            'price' => 'required|numeric|min:1',
-            'freight' => 'required|numeric|min:0',
+            'bardaana_type' => 'required|in:add,return,paid',
             'truck_no' => 'nullable|string|max:50',
-            'packing_type' => 'required|in:add,return,paid',
+            'net_weight' => 'required|numeric|min:1',
+            'khoot' => 'required|numeric|min:0',
+            'chungi' => 'required|numeric|min:0',
+            'bardaana_deduction' => 'required|numeric|min:0',
+            'bardaana_quantity' => 'required|numeric|min:1',
+            'freight' => 'required|numeric|min:0',
+            'price_mann' => 'required|numeric|min:1',
+            'bank_tax' => 'required|numeric|min:0',
             'date' => 'nullable|date',
             'payment_type' => 'required|in:cash,cheque,both',
-            'first_weight' => 'required|numeric|min:1',
-            'second_weight' => 'nullable|numeric|min:1',
-            'net_weight' => 'required|numeric|min:1',
-            'packing_weight' => 'required|numeric|min:1',
-            'final_weight' => 'required|numeric|min:1',
-        ];        
+        ];   
+        
 
         if ($request->input('payment_type') == 'cheque') {
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
@@ -104,7 +105,12 @@ class PurchaseBookController extends Controller
 
             // Start a transaction
             DB::beginTransaction();
-            $total_amount=($request->input('price')* $request->input('quantity'));
+            // calculate final weight,price and weight_per_bag
+            $final_weight=$request->net_weight-($request->khoot+$request->chungi+$request->bardaana_deduction);
+            $price = ($request->price_mann * $final_weight) / 40;
+            $weight_per_bag=$final_weight/$request->bardaana_quantity;
+            
+            $total_amount=$price;
             $add_amount=0;
             $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
@@ -119,7 +125,6 @@ class PurchaseBookController extends Controller
 
             $add_amount+= ($cash_amount+$cheque_amount);
 
-
             $totalWithPreBlnc=$previousBalance+$total_amount;
             $rem_amount=$total_amount-$add_amount;
             $rem_blnc_amount=$totalWithPreBlnc-$add_amount;
@@ -127,10 +132,19 @@ class PurchaseBookController extends Controller
             $purchaseBook = PurchaseBook::create([
                 'sup_id' => $request->sup_id,
                 'pro_id' => $request->pro_id,
-                'quantity' => $request->quantity,
-                'price' => $request->price,
+                'bardaana_type' => $request->bardaana_type,
                 'truck_no' => $request->truck_no,
-                'packing_type' => $request->packing_type,
+                'net_weight' => $request->net_weight,
+                'khoot' => $request->khoot,
+                'chungi' => $request->chungi,
+                'bardaana_deduction' => $request->bardaana_deduction,
+                'final_weight' => $final_weight,
+                'bardaana_quantity' => $request->bardaana_quantity,
+                'weight_per_bag' => $weight_per_bag,
+                'freight' => $request->freight,
+                'price' => $price,
+                'price_mann' => $request->price_mann,
+                'bank_tax' => $request->bank_tax,
                 'date' => $request->input('date', now()),
                 'payment_type' => $request->payment_type,
                 'bank_id' => $request->bank_id,
@@ -138,14 +152,9 @@ class PurchaseBookController extends Controller
                 'cheque_amount' => $cheque_amount,
                 'cheque_no' => $request->cheque_no,
                 'cheque_date' => $request->cheque_date,
-                'freight' => $request->freight,
+                'net_amount' => $add_amount,
                 'total_amount' => $total_amount,
                 'rem_amount' => $rem_amount,
-                'first_weight' => $request->first_weight,
-                'second_weight' => $request->second_weight,
-                'net_weight' => $request->net_weight,
-                'packing_weight' => $request->packing_weight,
-                'final_weight' => $request->final_weight,
             ]);
 
             if (!$purchaseBook) {
@@ -226,19 +235,20 @@ class PurchaseBookController extends Controller
         $rules = [
             'sup_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
             'pro_id' => ['required','exists:products,id',new ExistsNotSoftDeleted('products')],
-            'quantity' => 'required|numeric|min:1',
-            'price' => 'required|numeric|min:1',
-            'freight' => 'required|numeric|min:0',
+            'bardaana_type' => 'required|in:add,return,paid',
             'truck_no' => 'nullable|string|max:50',
-            'packing_type' => 'required|in:add,return,paid',
+            'net_weight' => 'required|numeric|min:1',
+            'khoot' => 'required|numeric|min:0',
+            'chungi' => 'required|numeric|min:0',
+            'bardaana_deduction' => 'required|numeric|min:0',
+            'bardaana_quantity' => 'required|numeric|min:1',
+            'freight' => 'required|numeric|min:0',
+            'price_mann' => 'required|numeric|min:1',
+            'bank_tax' => 'required|numeric|min:0',
             'date' => 'nullable|date',
             'payment_type' => 'required|in:cash,cheque,both',
-            'first_weight' => 'required|numeric|min:1',
-            'second_weight' => 'nullable|numeric|min:1',
-            'net_weight' => 'required|numeric|min:1',
-            'packing_weight' => 'required|numeric|min:1',
-            'final_weight' => 'required|numeric|min:1',
-        ];        
+        ];   
+     
 
         if ($request->input('payment_type') == 'cheque') {
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
@@ -286,19 +296,26 @@ class PurchaseBookController extends Controller
 
             // Start a transaction
             DB::beginTransaction();
-            $total_amount=($request->input('price')* $request->input('quantity'));
+
+            // calculate final weight,price and weight_per_bag
+            $final_weight=$request->net_weight-($request->khoot+$request->chungi+$request->bardaana_deduction);
+            $price = ($request->price_mann * $final_weight) / 40;
+            $weight_per_bag=$final_weight/$request->bardaana_quantity;
+            
+            $total_amount=$price;
             $add_amount=0;
             $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
-            $add_amount+= ($cash_amount+$cheque_amount);
 
             $lastLedger = $supplier->ledgers()->where('book_id', $id)->orderBy('id', 'desc')->first();
             $currentLedger = $supplier->ledgers()->where('book_id', $id)->first();
-
+           
             $previousBalance=0.00;
             if($lastLedger){
                 $previousBalance=$lastLedger->balance;
             }
+
+            $add_amount+= ($cash_amount+$cheque_amount);
 
             $totalWithPreBlnc=$previousBalance+$total_amount;
             $rem_amount=$total_amount-$add_amount;
@@ -307,10 +324,19 @@ class PurchaseBookController extends Controller
             $purchaseBook->update([
                 'sup_id' => $request->sup_id,
                 'pro_id' => $request->pro_id,
-                'quantity' => $request->quantity,
-                'price' => $request->price,
+                'bardaana_type' => $request->bardaana_type,
                 'truck_no' => $request->truck_no,
-                'packing_type' => $request->packing_type,
+                'net_weight' => $request->net_weight,
+                'khoot' => $request->khoot,
+                'chungi' => $request->chungi,
+                'bardaana_deduction' => $request->bardaana_deduction,
+                'final_weight' => $final_weight,
+                'bardaana_quantity' => $request->bardaana_quantity,
+                'weight_per_bag' => $weight_per_bag,
+                'freight' => $request->freight,
+                'price' => $price,
+                'price_mann' => $request->price_mann,
+                'bank_tax' => $request->bank_tax,
                 'date' => $request->input('date', now()),
                 'payment_type' => $request->payment_type,
                 'bank_id' => $request->bank_id,
@@ -318,14 +344,9 @@ class PurchaseBookController extends Controller
                 'cheque_amount' => $cheque_amount,
                 'cheque_no' => $request->cheque_no,
                 'cheque_date' => $request->cheque_date,
-                'freight' => $request->freight,
+                'net_amount' => $add_amount,
                 'total_amount' => $total_amount,
                 'rem_amount' => $rem_amount,
-                'first_weight' => $request->first_weight,
-                'second_weight' => $request->second_weight,
-                'net_weight' => $request->net_weight,
-                'packing_weight' => $request->packing_weight,
-                'final_weight' => $request->final_weight,
             ]);
 
             if (!$purchaseBook) {

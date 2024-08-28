@@ -12,11 +12,10 @@ class PurchaseBook extends Model
     public $table="purchase_book";
 
     protected $fillable = [
-       'serial_no', 'sup_id','pro_id', 'bank_id','quantity','price','freight','truck_no','packing_type',
-        'date','total_amount','payment_type','first_weight','second_weight','net_weight','packing_weight','final_weight',
-        'cash_amount','cheque_amount','cheque_no','cheque_date','rem_amount'
+       'serial_no', 'sup_id','pro_id', 'bank_id','bardaana_type','truck_no','net_weight','khoot','chungi','bardaana_deduction','final_weight','bardaana_quantity','weight_per_bag',
+       'freight','price','price_mann','bank_tax','total_amount','date','payment_type','cash_amount','cheque_amount','cheque_no','cheque_date','net_amount','rem_amount'
     ];
-
+            
     // Define the relationship with the Product model
     public function product()
     {
