@@ -12,7 +12,7 @@ class SaleBook extends Model
     public $table="sale_book";
 
     protected $fillable = [
-       'ref_no','buyer_id','truck_no', 'bank_id','packing_type','date','total_amount',
+       'ref_no','reference_no','buyer_id','truck_no', 'bank_id','packing_type','date','total_amount',
     ];
 
     public function details()

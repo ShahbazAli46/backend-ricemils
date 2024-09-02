@@ -35,6 +35,7 @@ class SaleBookController extends Controller
             'id' => ['required','numeric'],
             'buyer_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
             'truck_no' => 'nullable|string|max:50',
+            'reference_no' => 'nullable|string|max:50',
             'pro_id' => ['required','exists:products,id'],
             'price_mann' => 'required|numeric|min:1',
             'weight' => 'required|numeric|min:1',
@@ -87,6 +88,7 @@ class SaleBookController extends Controller
                 [
                     'buyer_id' => $request->buyer_id, // use buyer_id here
                     'truck_no' => $request->truck_no,
+                    'reference_no' => $request->reference_no,
                 ]
             );
         
@@ -312,7 +314,7 @@ class SaleBookController extends Controller
     public function show($id)
     {
         try {
-            $sale_book = SaleBook::with(['details','buyer:id,person_name'])->findOrFail($id);
+            $sale_book = SaleBook::with(['details','buyer'])->findOrFail($id);
             return response()->json(['data' => $sale_book]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Sale Order Not Found.'], Response::HTTP_NOT_FOUND);

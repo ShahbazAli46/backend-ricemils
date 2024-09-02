@@ -16,6 +16,7 @@ return new class extends Migration
         Schema::create('sale_book', function (Blueprint $table) {
             $table->id();
             $table->string('ref_no',50)->nullable();
+            $table->string('reference_no',50)->nullable();
             $table->unsignedBigInteger('buyer_id');
             $table->foreign('buyer_id')->references('id')->on('customers')->onDelete('cascade');
             $table->string('truck_no',50)->nullable();

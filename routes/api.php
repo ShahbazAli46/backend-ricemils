@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController};
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, DashboardController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('login', [AuthController::class,'login']);
 
 Route::middleware('auth:sanctum')->group( function () {
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+
     Route::apiResource('supplier', SupplierController::class);
     Route::post('/supplier/{id}', [SupplierController::class, 'update']);
     
@@ -60,8 +62,9 @@ Route::middleware('auth:sanctum')->group( function () {
 
     Route::apiResource('advance_cheque', AdvanceChequeController::class);
     Route::post('/advance_cheque/{id}', [AdvanceChequeController::class, 'update']);
-    Route::get('/advance_cheque/is_deferred/{id}/{value}', [AdvanceChequeController::class, 'changeStatus'])->where('value', '0|1');;
+    Route::get('/advance_cheque/is_deferred/{id}/{value}', [AdvanceChequeController::class, 'changeStatus'])->where('value', '0|1');
 
+    Route::apiResource('company_ledger', CompanyLedgerController::class);
 });
 
 

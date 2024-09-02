@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Product;
@@ -60,7 +61,6 @@ class PurchaseBookController extends Controller
             'payment_type' => 'required|in:cash,cheque,both',
         ];   
         
-
         if ($request->input('payment_type') == 'cheque') {
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -186,10 +186,15 @@ class PurchaseBookController extends Controller
             $res=$purchaseBook->addTransaction($transactionData);
             if(!$res){
                 DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Something Went Wrong Please Try Again Later.',
-                ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+
+            //company ledger
+            $transactionDataComp=['dr_amount'=>$add_amount,'cr_amount'=>0.00,'description'=>null,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
+            $res=$purchaseBook->addCompanyTransaction($transactionDataComp);
+            if(!$res){
+                DB::rollBack();
+                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
             // Commit the transaction
@@ -378,15 +383,30 @@ class PurchaseBookController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
                 $transactionData['cash_amount']= $cash_amount;
             }
+
             $res=$purchaseBook->updateTransaction($transactionData);
-          
+            if($res->original['status']!='success'){
+                DB::rollBack();
+                return response()->json($res->original, Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+
+
+            //company ledger update
+            $currentLedgerComp = CompanyLedger::where('link_id',$id)->where('link_name','purchase')->first();
+            $lastCompLedger = CompanyLedger::where('id', '<', $currentLedgerComp->id)->orderBy('id', 'desc')->first();
+            $preBalance=0;
+            if($lastCompLedger){
+                $preBalance=$lastCompLedger->balance;
+            }
+            $rem_comp_blnc_amount=$preBalance-$add_amount;
+            $transactionDataComp=['id'=>$currentLedgerComp->id,'dr_amount'=>$add_amount,'cr_amount'=>0.00,'description'=>null,'entry_type'=>'dr','balance'=>$rem_comp_blnc_amount];
+            $res=$lastCompLedger->updateCompanyTransaction($transactionDataComp);
+
             if(!$res){
                 DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Something Went Wrong Please Try Again Later.',
-                ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
+
 
             // Commit the transaction
             DB::commit();
@@ -414,7 +434,9 @@ class PurchaseBookController extends Controller
         try {
             $resource = PurchaseBook::findOrFail($id);
             $customer_ledger=CustomerLedger::where('book_id',$resource->id)->first();
+            $company_ledger=CompanyLedger::where('link_id',$resource->id)->where('link_name','purchase')->first();
             $resource->delete();
+            $resource->deleteCompanyTransection($company_ledger->id);
             $resource->deleteTransection($customer_ledger->id);
             return response()->json(['status'=>'success','message' => 'Purchase Order Deleted Successfully']);
         } catch (ModelNotFoundException $e) {

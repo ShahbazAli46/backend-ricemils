@@ -28,9 +28,9 @@ trait CustomerLedgerTrait
             // throw new \Exception("Customer not found");
             return 0;
         }
-        CustomerLedger::create($tranData);
+        $res=CustomerLedger::create($tranData);
         $this->reCalculateCrntBlnc($tranData['customer_id']);
-        return 1;
+        return $res;
     }
 
     public function reCalculateCrntBlnc($customer_id){

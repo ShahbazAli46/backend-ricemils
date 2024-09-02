@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\CompanyLedgerTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Expense extends Model
 {
-    use HasFactory;
+    use HasFactory,CompanyLedgerTrait;
     public $table="expenses";
 
     protected $fillable = [

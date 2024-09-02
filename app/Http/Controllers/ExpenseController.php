@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompanyLedger;
 use App\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -75,7 +76,6 @@ class ExpenseController extends Controller
         try {
             $payment_type=$request->input('payment_type');
            
-
             // Start a transaction
             DB::beginTransaction();
             $data_arr=[
@@ -92,6 +92,14 @@ class ExpenseController extends Controller
             $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
             
             $expense = Expense::create($data_arr);
+            
+            //company ledger
+            $transactionDataComp=['dr_amount'=>$data_arr['total_amount'],'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$expense->id,'link_name'=>'expense'];
+            $res=$expense->addCompanyTransaction($transactionDataComp);
+            if(!$res){
+                DB::rollBack();
+                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
 
             DB::commit();
             return response()->json([
@@ -190,6 +198,21 @@ class ExpenseController extends Controller
                 ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
+            //company ledger update
+            $currentLedgerComp=CompanyLedger::where('link_id',$id)->where('link_name','expense')->first();
+            $lastCompLedger = CompanyLedger::where('id', '<', $currentLedgerComp->id)->orderBy('id', 'desc')->first();
+            $preBalance=0;
+            if($lastCompLedger){
+                $preBalance=$lastCompLedger->balance;
+            }
+            $rem_comp_blnc_amount=$preBalance-$data_arr['total_amount'];
+            $transactionDataComp=['id'=>$currentLedgerComp->id,'dr_amount'=>$data_arr['total_amount'],'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','balance'=>$rem_comp_blnc_amount];
+            $res=$lastCompLedger->updateCompanyTransaction($transactionDataComp);
+            if(!$res){
+                DB::rollBack();
+                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+
             // Commit the transaction
             DB::commit();
             return response()->json([
@@ -215,6 +238,8 @@ class ExpenseController extends Controller
     {
         try {
             $resource = Expense::findOrFail($id);
+            $company_res=CompanyLedger::where('link_id',$id)->where('link_name','expense')->first();
+            $res=$resource->deleteCompanyTransection($company_res->id);
             $resource->delete();
             return response()->json(['status'=>'success','message' => 'Expense Deleted Successfully']);
         } catch (ModelNotFoundException $e) {

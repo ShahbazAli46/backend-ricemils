@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\CompanyLedgerTrait;
 use App\Traits\CustomerLedgerTrait;
 
 class CustomerLedger extends Model
 {
-    use HasFactory,CustomerLedgerTrait;
+    use HasFactory,CustomerLedgerTrait,CompanyLedgerTrait;
     public $table="customer_ledgers";
 
     protected $fillable = [

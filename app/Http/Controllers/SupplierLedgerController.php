@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
 use Illuminate\Http\Request;
@@ -143,6 +144,15 @@ class SupplierLedgerController extends Controller
                     'message' => 'Failed to Create Supplier Ledger.',
                 ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
+
+            //company ledger
+            $transactionDataComp=['dr_amount'=>$add_amount,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$res->id,'link_name'=>'supplier_ledger'];
+            $res=$supplier->addCompanyTransaction($transactionDataComp);
+            if(!$res){
+                DB::rollBack();
+                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+
             DB::commit();
             return response()->json([
                 'status' => 'success',
@@ -250,14 +260,39 @@ class SupplierLedgerController extends Controller
             }
             
             $res=$supplier_ledger->updateTransaction($transactionData);
-
-            if($res->original['status']=='success'){
-                DB::commit();
-                return response()->json($res->original, Response::HTTP_OK); // 200 OK
-            }else{
+            if($res->original['status']!='success'){
                 DB::rollBack();
                 return response()->json($res->original, Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
+
+
+            $res=$supplier_ledger->updateTransaction($transactionData);
+            if($res->original['status']!='success'){
+                DB::rollBack();
+                return response()->json($res->original, Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+
+            //company ledger update
+            $currentLedgerComp=CompanyLedger::where('link_id',$id)->where('link_name','supplier_ledger')->first();
+            $lastCompLedger = CompanyLedger::where('id', '<', $currentLedgerComp->id)->orderBy('id', 'desc')->first();
+            $preBalance=0;
+            if($lastCompLedger){
+                $preBalance=$lastCompLedger->balance;
+            }
+            $rem_comp_blnc_amount=$preBalance-$add_amount;
+            $transactionDataComp=['id'=>$currentLedgerComp->id,'dr_amount'=>$add_amount,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','balance'=>$rem_comp_blnc_amount];
+            $res=$lastCompLedger->updateCompanyTransaction($transactionDataComp);
+            if(!$res){
+                DB::rollBack();
+                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+ 
+            // Commit the transaction
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Ledger Updated Successfully.',
+            ], Response::HTTP_CREATED); // 201 Created
         } catch (ModelNotFoundException $e) {
             DB::rollBack();
             return response()->json(['status'=>'error', 'message' => 'Supplier Not Found.'], Response::HTTP_NOT_FOUND);
@@ -279,6 +314,8 @@ class SupplierLedgerController extends Controller
         try {
             $resource = CustomerLedger::where('customer_type','supplier')->where('id',$id)->where('description','!=','Opening Balance')->firstOrFail();
             $res=$resource->deleteTransection($id);
+            $company_res=CompanyLedger::where('link_id',$id)->where('link_name','supplier_ledger')->first();
+            $res=$resource->deleteCompanyTransection($company_res->id);
             return response()->json($res->original);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Supplier Ledger Not Found.'], Response::HTTP_NOT_FOUND);

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\CustomerLedgerTrait;
+use App\Traits\CompanyLedgerTrait;
 
 class PurchaseBook extends Model
 {
-    use HasFactory,CustomerLedgerTrait;
+    use HasFactory,CustomerLedgerTrait,CompanyLedgerTrait;
     public $table="purchase_book";
 
     protected $fillable = [

@@ -142,10 +142,15 @@ class BuyerLedgerController extends Controller
                     'message' => 'Failed to Create Buyer Ledger.',
                 ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
+
             DB::commit();
+            $last_4_ledger=$buyer->ledgers()->latest()->take(4)->get();
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Buyer Ledger Created Successfully.',
+                'buyer'  => $buyer,
+                'ledger' => $last_4_ledger
             ], Response::HTTP_CREATED); // 201 Created
         } catch (Exception $e) {
             DB::rollBack();
