@@ -42,14 +42,18 @@ trait CustomerLedgerTrait
             if($data_row->payment_type=='cheque' || $data_row->payment_type=='both' || $data_row->payment_type=='online'){
                 $bank=Bank::find($data_row->bank_id);
                 if($tranData['customer_type']=='buyer' && ($data_row->entry_type=='cr' || $data_row->entry_type=='dr&cr')){
+                    $dec_amount=$data_row->cheque_amount;
+                    if($tranData['payment_type']=='online'){
+                        $dec_amount=$data_row->cash_amount;
+                    }
+                    $bank->balance=$bank->balance-$dec_amount;
+                    $bank->save();
+                }else if($tranData['customer_type']=='supplier' && ($data_row->entry_type=='cr' || $data_row->entry_type=='dr&cr' || $className == 'App\Models\Expense')){
                     $add_amount=$data_row->cheque_amount;
                     if($tranData['payment_type']=='online'){
                         $add_amount=$data_row->cash_amount;
                     }
-                    $bank->balance=$bank->balance-$add_amount;
-                    $bank->save();
-                }else if($tranData['customer_type']=='supplier' && ($data_row->entry_type=='cr' || $data_row->entry_type=='dr&cr')){
-                    $bank->balance=$bank->balance+$data_row->cheque_amount;
+                    $bank->balance=$bank->balance+$add_amount;
                     $bank->save();
                 }
             }
@@ -63,9 +67,13 @@ trait CustomerLedgerTrait
             }
             $bank->balance=$bank->balance+$add_amount;
             $bank->save();
-        }else if($tranData['customer_type']=='supplier' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr&cr')){
+        }else if($tranData['customer_type']=='supplier' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr&cr')){
             $bank=Bank::find($tranData['bank_id']);
-            $bank->balance=$bank->balance-$tranData['cheque_amount'];
+            $dec_amount=$tranData['cheque_amount'];
+            if($tranData['payment_type']=='online'){
+                $dec_amount=$tranData['cash_amount'];
+            }
+            $bank->balance=$bank->balance-$dec_amount;
             $bank->save();
         }
     }
@@ -112,7 +120,6 @@ trait CustomerLedgerTrait
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Ledger Not Found.'], Response::HTTP_NOT_FOUND);
         } catch (Exception $e) {
-            \Log::info($e->getMessage());
             return response()->json(['status'=>'error', 'message' => 'Something went wrong.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         } 
     }
@@ -122,6 +129,27 @@ trait CustomerLedgerTrait
             $resource = CustomerLedger::findOrFail($tran_id);
             $customer_id=$resource->customer_id;
             $ledgerId=$resource->id;
+
+            //recalculate bank balance on delete
+            if($resource->payment_type=='online' || $resource->payment_type=='cheque' || $resource->payment_type=='both'){
+                $bank=Bank::find($resource->bank_id);
+                if($resource->customer_type=='buyer' && ($resource->entry_type=='cr' || $resource->entry_type=='dr&cr')){
+                    $dec_amount=$resource->cheque_amount;
+                    if($resource->payment_type=='online'){
+                        $dec_amount=$resource->cash_amount;
+                    }
+                    $bank->balance=$bank->balance-$dec_amount;
+                    $bank->save();
+                }else if($resource->customer_type=='supplier' && ($resource->entry_type=='cr' || $resource->entry_type=='dr&cr')){
+                    $add_amount=$resource->cheque_amount;
+                    if($resource->payment_type=='online'){
+                        $add_amount=$resource->cash_amount;
+                    }
+                    $bank->balance=$bank->balance+$add_amount;
+                    $bank->save();
+                }
+            }
+
             $lastLedger = CustomerLedger::where('customer_id', $customer_id)->where('id', '<', $ledgerId)->orderBy('id', 'desc')->first();
             $resource->delete();
 

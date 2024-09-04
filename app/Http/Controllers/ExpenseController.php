@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\CompanyLedger;
 use App\Models\Expense;
 use Illuminate\Http\Request;
@@ -58,6 +59,7 @@ class ExpenseController extends Controller
         }else if($request->input('payment_type') == 'online'){
             $rules['cash_amount']= 'required|numeric|min:1';
             $rules['transection_id']= 'required|string|max:100';
+            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -163,6 +165,7 @@ class ExpenseController extends Controller
         }else if($request->input('payment_type') == 'online'){
             $rules['cash_amount']= 'required|numeric|min:1';
             $rules['transection_id']= 'required|string|max:100';
+            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -201,10 +204,10 @@ class ExpenseController extends Controller
             $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
             
             $data_arr['id']=$id; 
-            $data_arr['model_name']='Expense'; 
+            $data_arr['model_name']='App\Models\Expense'; 
             $data_arr['customer_type']='supplier'; 
             $data_arr['entry_type']='cr';
-            $expense->reCalculateBankBalance($data_arr,$data_arr['cheque_amount']);
+            $expense->reCalculateBankBalance($data_arr);
             $expense->update($data_arr);
             if (!$expense) {
                 DB::rollBack();
@@ -254,6 +257,18 @@ class ExpenseController extends Controller
     {
         try {
             $resource = Expense::findOrFail($id);
+            
+            //recalculate bank balance on delete
+            if($resource->payment_type=='online' || $resource->payment_type=='cheque' || $resource->payment_type=='both'){
+                $bank=Bank::find($resource->bank_id);
+                $add_amount=$resource->cheque_amount;
+                if($resource->payment_type=='online'){
+                    $add_amount=$resource->cash_amount;
+                }
+                $bank->balance=$bank->balance+$add_amount;
+                $bank->save();
+            }
+
             $company_res=CompanyLedger::where('link_id',$id)->where('link_name','expense')->first();
             $res=$resource->deleteCompanyTransection($company_res->id);
             $resource->delete();

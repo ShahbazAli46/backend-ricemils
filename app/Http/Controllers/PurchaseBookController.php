@@ -71,6 +71,7 @@ class PurchaseBookController extends Controller
         }else if($request->input('payment_type') == 'online'){
             $rules['cash_amount']= 'required|numeric|min:1';
             $rules['transection_id']= 'required|string|max:100';
+            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -183,6 +184,7 @@ class PurchaseBookController extends Controller
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;;
                 $transactionData['transection_id']= $request->transection_id;
+                $transactionData['bank_id'] = $request->bank_id;
             }else{
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
@@ -272,6 +274,7 @@ class PurchaseBookController extends Controller
         }else if($request->input('payment_type') == 'online'){
             $rules['cash_amount']= 'required|numeric|min:1';
             $rules['transection_id']= 'required|string|max:100';
+            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -376,7 +379,7 @@ class PurchaseBookController extends Controller
                 ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
-            $transactionData=['id'=>$currentLedger->id,'model_name'=>'CustomerLedger','bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
+            $transactionData=['id'=>$currentLedger->id,'model_name'=>'App\Models\CustomerLedger','bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
             'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'supplier','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_blnc_amount];
             
@@ -390,6 +393,7 @@ class PurchaseBookController extends Controller
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;;
                 $transactionData['transection_id']= $request->transection_id;
+                $transactionData['bank_id'] = $request->bank_id;
             }else{
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
@@ -403,7 +407,6 @@ class PurchaseBookController extends Controller
                 DB::rollBack();
                 return response()->json($res->original, Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
-
 
             //company ledger update
             $currentLedgerComp = CompanyLedger::where('link_id',$id)->where('link_name','purchase')->first();
@@ -420,7 +423,6 @@ class PurchaseBookController extends Controller
                 DB::rollBack();
                 return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
-
 
             // Commit the transaction
             DB::commit();
