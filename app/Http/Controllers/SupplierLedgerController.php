@@ -62,7 +62,7 @@ class SupplierLedgerController extends Controller
     {
         $rules = [
             'sup_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
-            'payment_type' => 'required|in:cash,cheque,both',
+            'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
         ];        
 
@@ -73,6 +73,9 @@ class SupplierLedgerController extends Controller
             $rules['cheque_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
+        }else if($request->input('payment_type') == 'online'){
+            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['transection_id']= 'required|string|max:100';
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -101,7 +104,7 @@ class SupplierLedgerController extends Controller
             }
 
             $add_amount=0;
-            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $add_amount+= ($cash_amount+$cheque_amount);
 
@@ -118,7 +121,7 @@ class SupplierLedgerController extends Controller
 
             $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
+            'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
             
             if ($request->input('payment_type') == 'cheque') {
                 $transactionData['bank_id'] = $request->bank_id;
@@ -127,6 +130,9 @@ class SupplierLedgerController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
             }else if($request->input('payment_type') == 'cash'){
                 $transactionData['cash_amount']= $cash_amount;
+            }else if($request->input('payment_type') == 'online'){
+                $transactionData['cash_amount']= $cash_amount;;
+                $transactionData['transection_id']= $request->transection_id;
             }else{
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
@@ -193,7 +199,7 @@ class SupplierLedgerController extends Controller
     public function update(Request $request, $id)
     {
         $rules = [
-            'payment_type' => 'required|in:cash,cheque,both',
+            'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
         ];        
 
@@ -204,6 +210,9 @@ class SupplierLedgerController extends Controller
             $rules['cheque_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
+        }else if($request->input('payment_type') == 'online'){
+            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['transection_id']= 'required|string|max:100';
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -226,7 +235,7 @@ class SupplierLedgerController extends Controller
             $supplier_ledger = CustomerLedger::where('customer_type','supplier')->where('id',$id)->where('description','!=','Opening Balance')->firstOrFail();
            
             $add_amount=0;
-            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $add_amount+= ($cash_amount+$cheque_amount);
             $lastLedger = CustomerLedger::where('customer_id', $supplier_ledger->customer_id)->where('id', '<', $id)->orderBy('id', 'desc')->first();
@@ -240,9 +249,9 @@ class SupplierLedgerController extends Controller
 
             DB::beginTransaction();
             
-            $transactionData=['id'=>$supplier_ledger->id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
+            $transactionData=['id'=>$supplier_ledger->id,'model_name'=>'CustomerLedger','bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
+            'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
            
             if ($request->input('payment_type') == 'cheque') {
                 $transactionData['bank_id'] = $request->bank_id;
@@ -251,6 +260,9 @@ class SupplierLedgerController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
             }else if($request->input('payment_type') == 'cash'){
                 $transactionData['cash_amount']= $cash_amount;
+            }else if($request->input('payment_type') == 'online'){
+                $transactionData['cash_amount']= $cash_amount;;
+                $transactionData['transection_id']= $request->transection_id;
             }else{
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
@@ -259,13 +271,6 @@ class SupplierLedgerController extends Controller
                 $transactionData['cash_amount']= $cash_amount;
             }
             
-            $res=$supplier_ledger->updateTransaction($transactionData);
-            if($res->original['status']!='success'){
-                DB::rollBack();
-                return response()->json($res->original, Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
-            }
-
-
             $res=$supplier_ledger->updateTransaction($transactionData);
             if($res->original['status']!='success'){
                 DB::rollBack();

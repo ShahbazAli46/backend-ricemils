@@ -44,7 +44,7 @@ class ExpenseController extends Controller
     {
         $rules = [
             'expense_category_id' => ['required', 'exists:expense_categories,id', new ExistsNotSoftDeleted('expense_categories')],
-            'payment_type' => 'required|in:cash,cheque,both',
+            'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
         ];
 
@@ -55,6 +55,9 @@ class ExpenseController extends Controller
             $rules['cheque_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
+        }else if($request->input('payment_type') == 'online'){
+            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['transection_id']= 'required|string|max:100';
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -85,14 +88,18 @@ class ExpenseController extends Controller
                 'cheque_no' => $request->cheque_no,
                 'cheque_date' => $request->cheque_date,
                 'bank_id' => $request->bank_id,
+                'transection_id' => $payment_type=='online'?$request->transection_id:null,
             ];
             
-            $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $data_arr['cheque_amount']= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
-            
             $expense = Expense::create($data_arr);
-            
+
+            $data_arr['customer_type']='supplier'; 
+            $data_arr['entry_type']='cr';
+            $expense->reCalculateBankBalance($data_arr);
+
             //company ledger
             $transactionDataComp=['dr_amount'=>$data_arr['total_amount'],'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$expense->id,'link_name'=>'expense'];
             $res=$expense->addCompanyTransaction($transactionDataComp);
@@ -142,7 +149,7 @@ class ExpenseController extends Controller
     {
         $rules = [
             'expense_category_id' => ['required', 'exists:expense_categories,id', new ExistsNotSoftDeleted('expense_categories')],
-            'payment_type' => 'required|in:cash,cheque,both',
+            'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
         ];
 
@@ -153,6 +160,9 @@ class ExpenseController extends Controller
             $rules['cheque_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
+        }else if($request->input('payment_type') == 'online'){
+            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['transection_id']= 'required|string|max:100';
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -183,12 +193,18 @@ class ExpenseController extends Controller
                 'cheque_no' => $request->cheque_no,
                 'cheque_date' => $request->cheque_date,
                 'bank_id' => $request->bank_id,
+                'transection_id' => $payment_type=='online'?$request->transection_id:null,
             ];
 
-            $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $data_arr['cheque_amount']= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
-           
+            
+            $data_arr['id']=$id; 
+            $data_arr['model_name']='Expense'; 
+            $data_arr['customer_type']='supplier'; 
+            $data_arr['entry_type']='cr';
+            $expense->reCalculateBankBalance($data_arr,$data_arr['cheque_amount']);
             $expense->update($data_arr);
             if (!$expense) {
                 DB::rollBack();

@@ -33,6 +33,7 @@ class BankController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'bank_name' => 'required|string|max:100|unique:banks',
+            'balance' =>  'required|numeric|min:0'
         ]);
         
         if ($validator->fails()) {
@@ -45,6 +46,7 @@ class BankController extends Controller
         try {
             $bank = Bank::create([
                 'bank_name' => $request->input('bank_name'),
+                'balance' => $request->input('balance'),
             ]);
     
             return response()->json([

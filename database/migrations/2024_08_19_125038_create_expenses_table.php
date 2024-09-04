@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreign('bank_id')->references('id')->on('banks')->onDelete('cascade');
             $table->unsignedBigInteger('expense_category_id');
             $table->foreign('expense_category_id')->references('id')->on('expense_categories')->onDelete('cascade');
-            $table->enum('payment_type',['cash','cheque','both']);
+            $table->enum('payment_type',['cash','cheque','both','online']);
             $table->decimal('cash_amount', 15, 2)->default(0.00);
             $table->decimal('cheque_amount', 15, 2)->default(0.00);
             $table->string('cheque_no',100)->nullable();

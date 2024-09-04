@@ -60,7 +60,7 @@ class BuyerLedgerController extends Controller
     {
         $rules = [
             'buyer_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
-            'payment_type' => 'required|in:cash,cheque,both',
+            'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
         ];        
 
@@ -71,6 +71,10 @@ class BuyerLedgerController extends Controller
             $rules['cheque_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
+        }else if($request->input('payment_type') == 'online'){
+            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['transection_id']= 'required|string|max:100';
+            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -99,7 +103,7 @@ class BuyerLedgerController extends Controller
             }
 
             $add_amount=0;
-            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $add_amount+= ($cash_amount+$cheque_amount);
 
@@ -116,7 +120,7 @@ class BuyerLedgerController extends Controller
 
             $transactionData=['customer_id'=>$request->buyer_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
+            'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null, 'customer_type'=>'buyer','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
             
             if ($request->input('payment_type') == 'cheque') {
                 $transactionData['bank_id'] = $request->bank_id;
@@ -125,6 +129,10 @@ class BuyerLedgerController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
             }else if($request->input('payment_type') == 'cash'){
                 $transactionData['cash_amount']= $cash_amount;
+            }else if($request->input('payment_type') == 'online'){
+                $transactionData['cash_amount']= $cash_amount;;
+                $transactionData['transection_id']= $request->transection_id;
+                $transactionData['bank_id'] = $request->bank_id;
             }else{
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
@@ -187,7 +195,7 @@ class BuyerLedgerController extends Controller
     public function update(Request $request, $id)
     {
         $rules = [
-            'payment_type' => 'required|in:cash,cheque,both',
+            'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
         ];        
 
@@ -198,6 +206,10 @@ class BuyerLedgerController extends Controller
             $rules['cheque_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
+        }else if($request->input('payment_type') == 'online'){
+            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['transection_id']= 'required|string|max:100';
+            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
@@ -220,7 +232,7 @@ class BuyerLedgerController extends Controller
             $buyer_ledger = CustomerLedger::where('customer_type','buyer')->where('id',$id)->where('description','!=','Opening Balance')->firstOrFail();
            
             $add_amount=0;
-            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $add_amount+= ($cash_amount+$cheque_amount);
             $lastLedger = CustomerLedger::where('customer_id', $buyer_ledger->customer_id)->where('id', '<', $id)->orderBy('id', 'desc')->first();
@@ -234,9 +246,9 @@ class BuyerLedgerController extends Controller
 
             DB::beginTransaction();
             
-            $transactionData=['id'=>$buyer_ledger->id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
+            $transactionData=['id'=>$buyer_ledger->id,'model_name'=>'App\Models\CustomerLedger','bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
+            'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'buyer','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
            
             if ($request->input('payment_type') == 'cheque') {
                 $transactionData['bank_id'] = $request->bank_id;
@@ -245,6 +257,10 @@ class BuyerLedgerController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
             }else if($request->input('payment_type') == 'cash'){
                 $transactionData['cash_amount']= $cash_amount;
+            }else if($request->input('payment_type') == 'online'){
+                $transactionData['cash_amount'] = $cash_amount;
+                $transactionData['transection_id'] = $request->transection_id;
+                $transactionData['bank_id'] = $request->bank_id;
             }else{
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
