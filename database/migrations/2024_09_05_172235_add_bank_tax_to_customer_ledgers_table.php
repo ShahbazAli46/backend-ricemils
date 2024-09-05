@@ -13,8 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->enum('product_type',['paddy','other'])->after('product_description');
+        Schema::table('customer_ledgers', function (Blueprint $table) {
+            $table->decimal('bank_tax', 15, 2)->default(0.00);
         });
     }
 
@@ -25,8 +25,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropColumn('product_type');
+        Schema::table('customer_ledgers', function (Blueprint $table) {
+            $table->dropColumn('bank_tax');
         });
     }
 };

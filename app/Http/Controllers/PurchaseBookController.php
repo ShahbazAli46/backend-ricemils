@@ -57,7 +57,6 @@ class PurchaseBookController extends Controller
             'bardaana_quantity' => 'required|numeric|min:1',
             'freight' => 'required|numeric|min:0',
             'price_mann' => 'required|numeric|min:1',
-            'bank_tax' => 'required|numeric|min:0',
             'date' => 'nullable|date',
             'payment_type' => 'required|in:cash,cheque,both,online',
         ];   
@@ -67,6 +66,7 @@ class PurchaseBookController extends Controller
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
             $rules['cheque_amount']= 'required|numeric|min:1';
+            $rules['bank_tax']= 'required|numeric|min:0';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:0';
         }else if($request->input('payment_type') == 'online'){
@@ -79,11 +79,13 @@ class PurchaseBookController extends Controller
             }];
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
+            $rules['bank_tax']= 'required|numeric|min:0';
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
             $rules['cheque_amount']= 'required|numeric|min:1';
+            $rules['bank_tax']= 'required|numeric|min:0';
             $rules['cash_amount']= 'required|numeric|min:1';
         }
 
@@ -106,7 +108,7 @@ class PurchaseBookController extends Controller
                 ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
             }
 
-            $product=Product::where(['id'=>$request->pro_id,'product_type'=>'paddy'])->first();
+            $product=Product::where(['id'=>$request->pro_id])->first();
             if(!$product){
                 return response()->json([
                     'status' => 'error',
@@ -186,18 +188,21 @@ class PurchaseBookController extends Controller
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
                 $transactionData['cheque_amount']= $cheque_amount;
+                $transactionData['bank_tax']= $request->bank_tax;
             }else if($request->input('payment_type') == 'cash'){
                 $transactionData['cash_amount']= $cash_amount;
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;;
                 $transactionData['transection_id']= $request->transection_id;
                 $transactionData['bank_id'] = $request->bank_id;
+                $transactionData['bank_tax']= $request->bank_tax;
             }else{
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
                 $transactionData['cheque_amount']= $cheque_amount;
                 $transactionData['cash_amount']= $cash_amount;
+                $transactionData['bank_tax']= $request->bank_tax;
             }
             $res=$purchaseBook->addTransaction($transactionData);
             if(!$res){
@@ -265,7 +270,6 @@ class PurchaseBookController extends Controller
             'bardaana_quantity' => 'required|numeric|min:1',
             'freight' => 'required|numeric|min:0',
             'price_mann' => 'required|numeric|min:1',
-            'bank_tax' => 'required|numeric|min:0',
             'date' => 'nullable|date',
             'payment_type' => 'required|in:cash,cheque,both,online',
         ];   
@@ -276,6 +280,7 @@ class PurchaseBookController extends Controller
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
             $rules['cheque_amount']= 'required|numeric|min:1';
+            $rules['bank_tax']= 'required|numeric|min:0';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'online'){
@@ -288,11 +293,13 @@ class PurchaseBookController extends Controller
             }];
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
+            $rules['bank_tax']= 'required|numeric|min:0';
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
             $rules['cheque_amount']= 'required|numeric|min:1';
+            $rules['bank_tax']= 'required|numeric|min:0';
             $rules['cash_amount']= 'required|numeric|min:1';
         }
 
@@ -317,7 +324,7 @@ class PurchaseBookController extends Controller
                 ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
             }
 
-            $product=Product::where(['id'=>$request->pro_id,'product_type'=>'paddy'])->first();
+            $product=Product::where(['id'=>$request->pro_id])->first();
             if(!$product){
                 return response()->json([
                     'status' => 'error',
@@ -401,18 +408,21 @@ class PurchaseBookController extends Controller
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
                 $transactionData['cheque_amount']= $cheque_amount;
+                $transactionData['bank_tax']= $request->bank_tax;
             }else if($request->input('payment_type') == 'cash'){
                 $transactionData['cash_amount']= $cash_amount;
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;;
                 $transactionData['transection_id']= $request->transection_id;
                 $transactionData['bank_id'] = $request->bank_id;
+                $transactionData['bank_tax']= $request->bank_tax;
             }else{
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
                 $transactionData['cheque_amount']= $cheque_amount;
                 $transactionData['cash_amount']= $cash_amount;
+                $transactionData['bank_tax']= $request->bank_tax;
             }
 
             $res=$purchaseBook->updateTransaction($transactionData);

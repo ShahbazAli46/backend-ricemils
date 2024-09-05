@@ -17,18 +17,9 @@ class ProductController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
-    {   $product_type='all';
-        if($request->has("product_type") && ($request->product_type=='paddy' || $request->product_type=='other')){
-            if($request->product_type){
-                $products=Product::where('product_type',$request->product_type)->get();
-            }else{
-                $products=Product::where('product_type',$request->product_type)->get();
-            }
-            $product_type=$request->product_type;
-        }else{
-            $products=Product::all();
-        }
-        return response()->json(['product_type'=>$product_type, 'data' => $products]);
+    {
+        $products=Product::all();
+        return response()->json(['data' => $products]);
     }
 
     /**
@@ -40,9 +31,8 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_name' => 'required|string|max:100|unique:products',
+            'product_name' => 'required|string|max:100',
             'product_description' => 'nullable|string',
-            'product_type' => 'required|string|in:paddy,other'
         ]);
         
         if ($validator->fails()) {
@@ -56,7 +46,6 @@ class ProductController extends Controller
             $product = Product::create([
                 'product_name' => $request->input('product_name'),
                 'product_description' => $request->input('product_description'),
-                'product_type' => $request->input('product_type')
             ]);
     
             return response()->json([
@@ -97,7 +86,7 @@ class ProductController extends Controller
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [            
-            'product_name' => 'required|string|max:100|unique:products,product_name,'.$id,
+            'product_name' => 'required|string|max:100',
             'product_description' => 'nullable|string'
         ]);
         

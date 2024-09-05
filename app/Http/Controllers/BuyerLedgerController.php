@@ -28,10 +28,16 @@ class BuyerLedgerController extends Controller
                 if($request->has('start_date') && $request->has('end_date')){
                     $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                     $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                    $customer->ledgers = $customer->ledgers()->whereBetween('created_at', [$startDate, $endDate])->get();
+                    $customer->ledgers= $customer->load(['ledgers' => function($query) use ($startDate, $endDate) {
+                        $query->whereBetween('created_at', [$startDate, $endDate])->with('bank:id,bank_name'); // Include bank details
+                    }]);
+                    // $customer->ledgers = $customer->ledgers()->whereBetween('created_at', [$startDate, $endDate])->get();
                     return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
                 }else{
-                    $customer->ledgers = $customer->ledgers()->get();
+                    $customer->ledgers= $customer->load(['ledgers' => function($query) {
+                        $query->with('bank:id,bank_name'); // Include bank details
+                    }]);
+                    // $customer->ledgers = $customer->ledgers()->get();
                     return response()->json(['data' => $customer]);
                 }
             }else{
@@ -41,10 +47,10 @@ class BuyerLedgerController extends Controller
             if($request->has('start_date') && $request->has('end_date')){
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                $buyer_ledger = CustomerLedger::with(['customer:id,person_name'])->where('customer_type','buyer')->whereBetween('created_at', [$startDate, $endDate])->get();
+                $buyer_ledger = CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','buyer')->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $buyer_ledger]);
             }else{
-                $buyer_ledger =CustomerLedger::with(['customer:id,person_name'])->where('customer_type','buyer')->get();
+                $buyer_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','buyer')->get();
                 return response()->json(['data' => $buyer_ledger]);
             }
         }
@@ -58,10 +64,19 @@ class BuyerLedgerController extends Controller
                 if($request->has('start_date') && $request->has('end_date')){
                     $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                     $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                    $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+                    $customer->ledgers= $customer->load(['ledgers' => function($query) use ($startDate, $endDate) {
+                        $query->where('entry_type', 'cr')
+                              ->whereBetween('created_at', [$startDate, $endDate])
+                              ->with('bank:id,bank_name'); // Include bank details
+                    }]);
+                    // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
                     return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
                 }else{
-                    $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->get();
+                    $customer->ledgers= $customer->load(['ledgers' => function($query) {
+                        $query->where('entry_type', 'cr')
+                              ->with('bank:id,bank_name'); // Include bank details
+                    }]);
+                    // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->get();
                     return response()->json(['data' => $customer]);
                 }
             }else{
@@ -71,10 +86,10 @@ class BuyerLedgerController extends Controller
             if($request->has('start_date') && $request->has('end_date')){
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                $buyer_ledger = CustomerLedger::with(['customer:id,person_name'])->where('customer_type','buyer')->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+                $buyer_ledger = CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','buyer')->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $buyer_ledger]);
             }else{
-                $buyer_ledger =CustomerLedger::with(['customer:id,person_name'])->where('entry_type','cr')->where('customer_type','buyer')->get();
+                $buyer_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('entry_type','cr')->where('customer_type','buyer')->get();
                 return response()->json(['data' => $buyer_ledger]);
             }
         }

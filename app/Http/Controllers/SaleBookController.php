@@ -71,7 +71,7 @@ class SaleBookController extends Controller
             }
         
             // Validate product existence
-            $product = Product::where(['id' => $request->pro_id, 'product_type' => 'other'])->firstOrFail();
+            $product = Product::where(['id' => $request->pro_id])->firstOrFail();
             if (!$product) {
                 return response()->json([
                     'status' => 'error',

@@ -29,4 +29,8 @@ class Bank extends Model
         return $this->attributes['advance_cheques_sum_cheque_amount'] ?? 0.00;
     }
     
+    public function customerLedger()
+    {
+        return $this->hasMany(CustomerLedger::class);
+    }
 }
