@@ -23,9 +23,9 @@ class ExpenseController extends Controller
     public function index(Request $request)
     {
         if($request->has('start_date') && $request->has('end_date')){
-            $startDate = $request->input('start_date');
-            $endDate = $request->input('end_date');
-
+            $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+            
             $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name'])
             ->whereBetween('created_at', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $expense]);

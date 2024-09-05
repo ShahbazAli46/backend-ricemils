@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
@@ -69,7 +70,13 @@ class PurchaseBookController extends Controller
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:0';
         }else if($request->input('payment_type') == 'online'){
-            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['cash_amount']= ['required','numeric','min:1', 
+            function ($attribute, $value, $fail) use ($request) {
+                $bank = Bank::find($request->input('bank_id'));
+                if ($bank && $value > $bank->balance) {
+                    $fail('The transection amount cannot be greater than the bank balance.');
+                }
+            }];
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
@@ -272,7 +279,13 @@ class PurchaseBookController extends Controller
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'online'){
-            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['cash_amount']= ['required','numeric','min:1', 
+            function ($attribute, $value, $fail) use ($request) {
+                $bank = Bank::find($request->input('bank_id'));
+                if ($bank && $value > $bank->balance) {
+                    $fail('The transection amount cannot be greater than the bank balance.');
+                }
+            }];
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{

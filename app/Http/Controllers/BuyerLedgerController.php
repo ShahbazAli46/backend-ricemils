@@ -41,15 +41,45 @@ class BuyerLedgerController extends Controller
             if($request->has('start_date') && $request->has('end_date')){
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                $buyer_ledger = CustomerLedger::with(['customer:id,person_name'])->whereBetween('created_at', [$startDate, $endDate])->get();
+                $buyer_ledger = CustomerLedger::with(['customer:id,person_name'])->where('customer_type','buyer')->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $buyer_ledger]);
             }else{
-                $buyer_ledger =CustomerLedger::with(['customer:id,person_name'])->get();
+                $buyer_ledger =CustomerLedger::with(['customer:id,person_name'])->where('customer_type','buyer')->get();
                 return response()->json(['data' => $buyer_ledger]);
             }
         }
     }
 
+    public function receivedBuyerAmount(Request $request)
+    {   
+        if($request->has('buyer_id')){
+            $customer=Customer::with(['reference:id,person_name,customer_type'])->where('customer_type','buyer')->where('id',$request->buyer_id)->first();
+            if($customer){
+                if($request->has('start_date') && $request->has('end_date')){
+                    $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                    $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+                    $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+                    return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
+                }else{
+                    $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->get();
+                    return response()->json(['data' => $customer]);
+                }
+            }else{
+                return response()->json(['status'=>'error', 'message' => 'Buyer Not Found.'], Response::HTTP_NOT_FOUND);
+            }
+        }else{
+            if($request->has('start_date') && $request->has('end_date')){
+                $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+                $buyer_ledger = CustomerLedger::with(['customer:id,person_name'])->where('customer_type','buyer')->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+                return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $buyer_ledger]);
+            }else{
+                $buyer_ledger =CustomerLedger::with(['customer:id,person_name'])->where('entry_type','cr')->where('customer_type','buyer')->get();
+                return response()->json(['data' => $buyer_ledger]);
+            }
+        }
+    }
+    
     /**
      * Store a newly created resource in storage.
      *

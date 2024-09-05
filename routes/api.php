@@ -47,6 +47,7 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::post('/purchase_book/{id}', [PurchaseBookController::class, 'update']);
     
     Route::apiResource('supplier_ledger', SupplierLedgerController::class);
+    Route::get('/get_supplier_paid_amount', [SupplierLedgerController::class, 'getSupplierPaidAmount']);
     Route::post('/supplier_ledger/{id}', [SupplierLedgerController::class, 'update']);
 
     Route::get('/sale_book/get_next_ref_no', [SaleBookController::class, 'getNextRefNo']);
@@ -58,6 +59,7 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::post('/sale_book/{id}', [SaleBookController::class, 'update']);
 
     Route::apiResource('buyer_ledger', BuyerLedgerController::class);
+    Route::get('/received_buyer_amount', [BuyerLedgerController::class, 'receivedBuyerAmount']);
     Route::post('/buyer_ledger/{id}', [BuyerLedgerController::class, 'update']);
 
     Route::apiResource('advance_cheque', AdvanceChequeController::class);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
@@ -32,7 +33,7 @@ class SupplierLedgerController extends Controller
                     $customer->ledgers = $customer->ledgers()->whereBetween('created_at', [$startDate, $endDate])->get();
                     return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
                 }else{
-                    $customer->ledgers = $customer->ledgers()->get();
+                    $customer->ledgers = $customer->ledgers()->where('customer_type','supplier')->get();
                     return response()->json(['data' => $customer]);
                 }
             }else{
@@ -43,10 +44,41 @@ class SupplierLedgerController extends Controller
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
     
-                $supplier_ledger = CustomerLedger::with(['customer:id,person_name'])->whereBetween('created_at', [$startDate, $endDate])->get();
+                $supplier_ledger = CustomerLedger::with(['customer:id,person_name'])->where('customer_type','supplier')->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $supplier_ledger]);
             }else{
-                $supplier_ledger =CustomerLedger::with(['customer:id,person_name'])->get();
+                $supplier_ledger =CustomerLedger::with(['customer:id,person_name'])->where('customer_type','supplier')->get();
+                return response()->json(['data' => $supplier_ledger]);
+            }
+        }
+    }
+    
+    public function getSupplierPaidAmount(Request $request)
+    {   
+        if($request->has('sup_id')){
+            $customer=Customer::with(['reference:id,person_name,customer_type'])->where('customer_type','supplier')->where('id',$request->sup_id)->first();
+            if($customer){
+                if($request->has('start_date') && $request->has('end_date')){
+                    $startDate = $request->input('start_date');
+                    $endDate = $request->input('end_date');
+                    $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+                    return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
+                }else{
+                    $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->where('customer_type','supplier')->get();
+                    return response()->json(['data' => $customer]);
+                }
+            }else{
+                return response()->json(['status'=>'error', 'message' => 'Supplier Not Found.'], Response::HTTP_NOT_FOUND);
+            }
+        }else{
+            if($request->has('start_date') && $request->has('end_date')){
+                $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+    
+                $supplier_ledger = CustomerLedger::with(['customer:id,person_name'])->where('entry_type','cr')->where('customer_type','supplier')->whereBetween('created_at', [$startDate, $endDate])->get();
+                return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $supplier_ledger]);
+            }else{
+                $supplier_ledger =CustomerLedger::with(['customer:id,person_name'])->where('entry_type','cr')->where('customer_type','supplier')->get();
                 return response()->json(['data' => $supplier_ledger]);
             }
         }
@@ -74,7 +106,13 @@ class SupplierLedgerController extends Controller
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'online'){
-            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['cash_amount']= ['required','numeric','min:1', 
+            function ($attribute, $value, $fail) use ($request) {
+                $bank = Bank::find($request->input('bank_id'));
+                if ($bank && $value > $bank->balance) {
+                    $fail('The transection amount cannot be greater than the bank balance.');
+                }
+            }];
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
@@ -213,7 +251,13 @@ class SupplierLedgerController extends Controller
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'online'){
-            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['cash_amount']= ['required','numeric','min:1', 
+            function ($attribute, $value, $fail) use ($request) {
+                $bank = Bank::find($request->input('bank_id'));
+                if ($bank && $value > $bank->balance) {
+                    $fail('The transection amount cannot be greater than the bank balance.');
+                }
+            }];
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
         }else{
