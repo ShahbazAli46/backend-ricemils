@@ -14,11 +14,16 @@ class DashboardController extends Controller
     {
         if($request->has('date')){
             $date = \Carbon\Carbon::parse($request->input('date'))->startOfDay();
-            $openingBalance = CompanyLedger::whereDate('created_at', $date)->first();
+            $openingBalanceRecord = CompanyLedger::where('created_at', '<', $date)->orderBy('created_at', 'desc')->first();
+            if(!$openingBalanceRecord){
+                 $openingBalanceRecord = CompanyLedger::whereDate('created_at', $date)->first();
+            }
+            $openingBalance = $openingBalanceRecord ? $openingBalanceRecord->balance : 0;
+
             $inflowSumCom = CompanyLedger::whereDate('created_at', $date)->sum('cr_amount');
             $inflowSumCus = CustomerLedger::whereDate('created_at', $date)->where('customer_type','buyer')->where('entry_type','cr')->sum('cr_amount');
             $outflowSum = CompanyLedger::whereDate('created_at', $date)->sum('dr_amount');
-            $data['opening_balance'] = $openingBalance?$openingBalance->balance:0;
+            $data['opening_balance'] = $openingBalance;
             $data['inflow'] = $inflowSumCom+$inflowSumCus;
             $data['outflow'] = $outflowSum;
             return response()->json(['date'=>$date,'data'=>$data]);
@@ -27,7 +32,7 @@ class DashboardController extends Controller
             $inflowSumCom = CompanyLedger::sum('cr_amount');
             $inflowSumCus = CustomerLedger::where('customer_type','buyer')->where('entry_type','cr')->sum('cr_amount');
             $outflowSum = CompanyLedger::sum('dr_amount');
-            $data['opening_balance'] = $openingBalance->balance;
+            $data['opening_balance'] = $openingBalance->balance?$openingBalance->balance:0;
             $data['inflow'] = $inflowSumCom+$inflowSumCus;
             $data['outflow'] = $outflowSum;
             return response()->json(['data'=>$data]);
