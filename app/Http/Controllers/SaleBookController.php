@@ -39,6 +39,10 @@ class SaleBookController extends Controller
             'pro_id' => ['required','exists:products,id'],
             'price_mann' => 'required|numeric|min:1',
             'weight' => 'required|numeric|min:1',
+            'khoot' => 'required|numeric|min:0',
+            'chungi' => 'required|numeric|min:0',
+            'salai_amt_per_bag' => 'required|numeric|min:0',
+            'bardaana_quantity' => 'required|numeric|min:0',
             'product_description' => 'nullable|string',
         ];        
 
@@ -73,10 +77,7 @@ class SaleBookController extends Controller
             // Validate product existence
             $product = Product::where(['id' => $request->pro_id])->firstOrFail();
             if (!$product) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Product Type Is Not Valid.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                return response()->json(['status' => 'error','message' => 'Product Type Is Not Valid.'], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
         
             // Create or update SaleBook
@@ -95,12 +96,16 @@ class SaleBookController extends Controller
             // Ensure SaleBook was created or found
             if (!$saleBook) {
                 DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Failed to Add Sale Order.',
-                ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                return response()->json(['status' => 'error','message' => 'Failed to Add Sale Order.'], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
-            $price = ($request->price_mann * $request->weight) / 40;
+
+
+            $net_weight=($request->weight-($request->khoot+$request->chungi));
+            $price = ($request->price_mann * $net_weight) / 40;
+
+            
+            $total_salai_amt=($request->salai_amt_per_bag*$request->bardaana_quantity);
+
             // Create or update SaleBookDetail
             $saleBookDetail = SaleBookDetail::updateOrCreate(
                 [
@@ -112,8 +117,14 @@ class SaleBookController extends Controller
                     'product_description' => $product->product_description,
                     'price_mann' => $request->price_mann,
                     'weight' => $request->weight,
+                    'khoot' => $request->khoot,
+                    'chungi' => $request->chungi,
+                    'net_weight' => $net_weight,
                     'price' => $price,
-                    'total_amount' => $price,
+                    'salai_amt_per_bag' => $request->salai_amt_per_bag,
+                    'bardaana_quantity' => $request->bardaana_quantity,
+                    'total_salai_amt' => $total_salai_amt,
+                    'total_amount' => $total_salai_amt+$price,
                 ]
             );
             
