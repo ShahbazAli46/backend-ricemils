@@ -102,13 +102,16 @@ class ExpenseController extends Controller
             $data_arr['entry_type']='cr';
             $expense->reCalculateBankBalance($data_arr);
 
-            //company ledger
-            $transactionDataComp=['dr_amount'=>$data_arr['total_amount'],'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$expense->id,'link_name'=>'expense'];
-            $res=$expense->addCompanyTransaction($transactionDataComp);
-            if(!$res){
-                DB::rollBack();
-                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
+                //company ledger
+                $transactionDataComp=['dr_amount'=>$data_arr['cash_amount'],'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$expense->id,'link_name'=>'expense'];
+                $res=$expense->addCompanyTransaction($transactionDataComp);
+                if(!$res){
+                    DB::rollBack();
+                    return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                }
             }
+
 
             DB::commit();
             return response()->json([
@@ -209,27 +212,30 @@ class ExpenseController extends Controller
             $data_arr['entry_type']='cr';
             $expense->reCalculateBankBalance($data_arr);
             $expense->update($data_arr);
+
             if (!$expense) {
                 DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Failed to Update Expense Order.',
-                ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                return response()->json(['status' => 'error','message' => 'Failed to Update Expense Order.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
             //company ledger update
-            $currentLedgerComp=CompanyLedger::where('link_id',$id)->where('link_name','expense')->first();
-            $lastCompLedger = CompanyLedger::where('id', '<', $currentLedgerComp->id)->orderBy('id', 'desc')->first();
-            $preBalance=0;
-            if($lastCompLedger){
-                $preBalance=$lastCompLedger->balance;
-            }
-            $rem_comp_blnc_amount=$preBalance-$data_arr['total_amount'];
-            $transactionDataComp=['id'=>$currentLedgerComp->id,'dr_amount'=>$data_arr['total_amount'],'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','balance'=>$rem_comp_blnc_amount];
-            $res=$lastCompLedger->updateCompanyTransaction($transactionDataComp);
-            if(!$res){
-                DB::rollBack();
-                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            $company_ledger=CompanyLedger::where('link_id',$id)->where('link_name','expense')->first();
+            if($company_ledger){
+                if($expense->payment_type=="cash" || $expense->payment_type=="both"){
+                    $transactionDataComp=['id'=>$company_ledger->id,'dr_amount'=>$expense->cash_amount,'cr_amount'=>0.00,'description'=>$request->description];
+                    $expense->updateCompanyTransaction($transactionDataComp);
+                }else{
+                    $expense->deleteCompanyTransection($company_ledger->id);
+                }
+            }else{
+                if($expense->payment_type=="cash" || $expense->payment_type=="both"){
+                    $transactionDataComp=['dr_amount'=>$expense->cash_amount,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$expense->id,'link_name'=>'expense'];
+                    $res=$expense->addCompanyTransaction($transactionDataComp);
+                    if(!$res){
+                        DB::rollBack();
+                        return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                    }
+                }
             }
 
             // Commit the transaction

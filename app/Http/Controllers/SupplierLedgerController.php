@@ -182,7 +182,7 @@ class SupplierLedgerController extends Controller
             $rem_blnc_amount=$previousBalance-$add_amount;
 
             DB::beginTransaction();
-
+            $comp_debit_amt=0;
             $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
             'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
@@ -194,6 +194,7 @@ class SupplierLedgerController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
                 $transactionData['bank_tax']= $request->bank_tax;
             }else if($request->input('payment_type') == 'cash'){
+                $comp_debit_amt+=$cash_amount;
                 $transactionData['cash_amount']= $cash_amount;
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;
@@ -201,6 +202,7 @@ class SupplierLedgerController extends Controller
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['bank_tax']= $request->bank_tax;
             }else{
+                $comp_debit_amt+=$cash_amount;
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
@@ -219,12 +221,14 @@ class SupplierLedgerController extends Controller
                 ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
-            //company ledger
-            $transactionDataComp=['dr_amount'=>$add_amount,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$res->id,'link_name'=>'supplier_ledger'];
-            $res=$supplier->addCompanyTransaction($transactionDataComp);
-            if(!$res){
-                DB::rollBack();
-                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
+                //company ledger
+                $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$res->id,'link_name'=>'supplier_ledger'];
+                $res=$supplier->addCompanyTransaction($transactionDataComp);
+                if(!$res){
+                    DB::rollBack();
+                    return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                }
             }
 
             DB::commit();
@@ -326,7 +330,8 @@ class SupplierLedgerController extends Controller
             $rem_blnc_amount=$previousBalance-$add_amount;
 
             DB::beginTransaction();
-            
+            $comp_debit_amt=0;
+
             $transactionData=['id'=>$supplier_ledger->id,'model_name'=>'App\Models\CustomerLedger','bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
             'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'supplier','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
@@ -338,6 +343,7 @@ class SupplierLedgerController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
                 $transactionData['bank_tax']= $request->bank_tax;
             }else if($request->input('payment_type') == 'cash'){
+                $comp_debit_amt+=$cash_amount;
                 $transactionData['cash_amount']= $cash_amount;
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;;
@@ -345,6 +351,7 @@ class SupplierLedgerController extends Controller
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['bank_tax']= $request->bank_tax;
             }else{
+                $comp_debit_amt+=$cash_amount;
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
@@ -360,20 +367,25 @@ class SupplierLedgerController extends Controller
             }
 
             //company ledger update
-            $currentLedgerComp=CompanyLedger::where('link_id',$id)->where('link_name','supplier_ledger')->first();
-            $lastCompLedger = CompanyLedger::where('id', '<', $currentLedgerComp->id)->orderBy('id', 'desc')->first();
-            $preBalance=0;
-            if($lastCompLedger){
-                $preBalance=$lastCompLedger->balance;
+            $company_ledger=CompanyLedger::where('link_id',$id)->where('link_name','supplier_ledger')->first();
+            if($company_ledger){
+                if($request->payment_type=="cash" || $request->payment_type=="both"){
+                    $transactionDataComp=['id'=>$company_ledger->id,'dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description];
+                    $supplier_ledger->updateCompanyTransaction($transactionDataComp);
+                }else{
+                    $supplier_ledger->deleteCompanyTransection($company_ledger->id);
+                }
+            }else{
+                if($request->payment_type=="cash" || $request->payment_type=="both"){
+                    $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$supplier_ledger->id,'link_name'=>'supplier_ledger'];
+                    $res=$supplier_ledger->addCompanyTransaction($transactionDataComp);
+                    if(!$res){
+                        DB::rollBack();
+                        return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                    }
+                }
             }
-            $rem_comp_blnc_amount=$preBalance-$add_amount;
-            $transactionDataComp=['id'=>$currentLedgerComp->id,'dr_amount'=>$add_amount,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','balance'=>$rem_comp_blnc_amount];
-            $res=$lastCompLedger->updateCompanyTransaction($transactionDataComp);
-            if(!$res){
-                DB::rollBack();
-                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
-            }
- 
+
             // Commit the transaction
             DB::commit();
             return response()->json([

@@ -11,7 +11,7 @@ class SaleBookDetail extends Model
     public $table="sale_book_detail";
 
     protected $fillable = [
-       'sale_book_id','pro_id','product_name','product_description','weight','price','khoot','chungi','net_weight','salai_amt_per_bag','bardaana_quantity','total_salai_amt','price_mann','total_amount'
+       'sale_book_id','pro_id','product_name','product_description','weight','price','khoot','bardaana_deduction','net_weight','salai_amt_per_bag','bardaana_quantity','total_salai_amt','price_mann','total_amount'
     ];
 
     public function saleBook()

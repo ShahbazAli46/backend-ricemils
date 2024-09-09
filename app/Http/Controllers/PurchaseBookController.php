@@ -29,7 +29,7 @@ class PurchaseBookController extends Controller
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
-            $purchase_book = PurchaseBook::with(['product:id,product_name','supplier:id,person_name'])->whereBetween('date', [$startDate, $endDate])->get();
+            $purchase_book = PurchaseBook::with(['product:id,product_name','supplier:id,person_name'])->whereBetween('created_at', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $purchase_book]);
         }else{
             $purchase_book=PurchaseBook::with(['product:id,product_name','supplier:id,person_name'])->get();
@@ -103,22 +103,17 @@ class PurchaseBookController extends Controller
             $payment_type=$request->input('payment_type');
             $supplier=Customer::where(['id'=>$request->sup_id,'customer_type'=>'supplier'])->first();
             if(!$supplier){
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Supplier Does Not Exist.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
+                return response()->json(['status' => 'error','message' => 'Supplier Does Not Exist.'], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
             }
 
             $product=Product::where(['id'=>$request->pro_id])->first();
             if(!$product){
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Product Does Not Exist.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
+                return response()->json(['status' => 'error','message' => 'Product Does Not Exist.'], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
             }
 
             // Start a transaction
             DB::beginTransaction();
+            $comp_debit_amt=0;
             // calculate final weight,price and weight_per_bag
             $final_weight=$request->net_weight-($request->khoot+$request->chungi+$request->bardaana_deduction);
             $price = ($request->price_mann * $final_weight) / 40;
@@ -152,7 +147,7 @@ class PurchaseBookController extends Controller
                 'khoot' => $request->khoot,
                 'chungi' => $request->chungi,
                 'bardaana_deduction' => $request->bardaana_deduction,
-                'bardaana_amount' => $request->bardaana_amount,
+                'bardaana_amount' => $request->filled('bardaana_amount')??0,
                 'final_weight' => $final_weight,
                 'bardaana_quantity' => $request->bardaana_quantity,
                 'weight_per_bag' => $weight_per_bag,
@@ -192,6 +187,7 @@ class PurchaseBookController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
                 $transactionData['bank_tax']= $request->bank_tax;
             }else if($request->input('payment_type') == 'cash'){
+                $comp_debit_amt+=$cash_amount;
                 $transactionData['cash_amount']= $cash_amount;
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;;
@@ -199,6 +195,7 @@ class PurchaseBookController extends Controller
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['bank_tax']= $request->bank_tax;
             }else{
+                $comp_debit_amt+=$cash_amount;
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
@@ -212,12 +209,14 @@ class PurchaseBookController extends Controller
                 return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
-            //company ledger
-            $transactionDataComp=['dr_amount'=>$add_amount,'cr_amount'=>0.00,'description'=>null,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
-            $res=$purchaseBook->addCompanyTransaction($transactionDataComp);
-            if(!$res){
-                DB::rollBack();
-                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
+                //company ledger
+                $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>null,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
+                $res=$purchaseBook->addCompanyTransaction($transactionDataComp);
+                if(!$res){
+                    DB::rollBack();
+                    return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                }
             }
 
             // Commit the transaction
@@ -337,7 +336,7 @@ class PurchaseBookController extends Controller
 
             // Start a transaction
             DB::beginTransaction();
-
+            $comp_debit_amt=0;
             // calculate final weight,price and weight_per_bag
             $final_weight=$request->net_weight-($request->khoot+$request->chungi+$request->bardaana_deduction);
             $price = ($request->price_mann * $final_weight) / 40;
@@ -374,7 +373,7 @@ class PurchaseBookController extends Controller
                 'khoot' => $request->khoot,
                 'chungi' => $request->chungi,
                 'bardaana_deduction' => $request->bardaana_deduction,
-                'bardaana_amount' => $request->bardaana_amount,
+                'bardaana_amount' => $request->filled('bardaana_amount')??0,
                 'final_weight' => $final_weight,
                 'bardaana_quantity' => $request->bardaana_quantity,
                 'weight_per_bag' => $weight_per_bag,
@@ -414,6 +413,7 @@ class PurchaseBookController extends Controller
                 $transactionData['cheque_amount']= $cheque_amount;
                 $transactionData['bank_tax']= $request->bank_tax;
             }else if($request->input('payment_type') == 'cash'){
+                $comp_debit_amt+=$cash_amount;
                 $transactionData['cash_amount']= $cash_amount;
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;;
@@ -421,6 +421,7 @@ class PurchaseBookController extends Controller
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['bank_tax']= $request->bank_tax;
             }else{
+                $comp_debit_amt+=$cash_amount;
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
@@ -436,19 +437,23 @@ class PurchaseBookController extends Controller
             }
 
             //company ledger update
-            $currentLedgerComp = CompanyLedger::where('link_id',$id)->where('link_name','purchase')->first();
-            $lastCompLedger = CompanyLedger::where('id', '<', $currentLedgerComp->id)->orderBy('id', 'desc')->first();
-            $preBalance=0;
-            if($lastCompLedger){
-                $preBalance=$lastCompLedger->balance;
-            }
-            $rem_comp_blnc_amount=$preBalance-$add_amount;
-            $transactionDataComp=['id'=>$currentLedgerComp->id,'dr_amount'=>$add_amount,'cr_amount'=>0.00,'description'=>null,'entry_type'=>'dr','balance'=>$rem_comp_blnc_amount];
-            $res=$lastCompLedger->updateCompanyTransaction($transactionDataComp);
-
-            if(!$res){
-                DB::rollBack();
-                return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            $company_ledger=CompanyLedger::where('link_id',$id)->where('link_name','purchase')->first();
+            if($company_ledger){
+                if($purchaseBook->payment_type=="cash" || $purchaseBook->payment_type=="both"){
+                    $transactionDataComp=['id'=>$company_ledger->id,'dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description];
+                    $purchaseBook->updateCompanyTransaction($transactionDataComp);
+                }else{
+                    $purchaseBook->deleteCompanyTransection($company_ledger->id);
+                }
+            }else{
+                if($purchaseBook->payment_type=="cash" || $purchaseBook->payment_type=="both"){
+                    $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
+                    $res=$purchaseBook->addCompanyTransaction($transactionDataComp);
+                    if(!$res){
+                        DB::rollBack();
+                        return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                    }
+                }
             }
 
             // Commit the transaction

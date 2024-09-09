@@ -32,6 +32,7 @@ trait CompanyLedgerTrait
         return 1;
     }
     
+
     public function reCalculateCompanyTranBlnc($startingLedgerId,$previousBalance)
     {
         // Get all transactions for company after the specified ledger entry

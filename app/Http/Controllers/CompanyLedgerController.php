@@ -23,24 +23,10 @@ class CompanyLedgerController extends Controller
     public function store(Request $request)
     {
         $rules = [
-            'payment_type' => 'required|in:cash,cheque,both',
+            'payment_type' => 'required|in:cash',
             'description' => 'nullable|string|max:255',
+            'cash_amount' => 'required|numeric|min:1',
         ];
-
-        if ($request->input('payment_type') == 'cheque') {
-            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
-            $rules['cheque_no']= 'required|string|max:100';
-            $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|min:1';
-        }else if($request->input('payment_type') == 'cash'){
-            $rules['cash_amount']= 'required|numeric|min:1';
-        }else{
-            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
-            $rules['cheque_no']= 'required|string|max:100';
-            $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|min:1';
-            $rules['cash_amount']= 'required|numeric|min:1';
-        }
 
         $validator = Validator::make($request->all(), $rules);
         
@@ -52,23 +38,15 @@ class CompanyLedgerController extends Controller
         }
         
         try {
-            $payment_type=$request->input('payment_type');
-           
-            // Start a transaction
             DB::beginTransaction();
             $data_arr=[
                 'payment_type' => $request->input('payment_type'),
                 'description' => $request->input('description'),
-                'cheque_no' => $request->cheque_no,
-                'cheque_date' => $request->cheque_date,
-                'bank_id' => $request->bank_id,
+                'cash_amount' => $request->cash_amount,
+                'total_amount' => $request->cash_amount,
             ];
-            
-            $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
-            $data_arr['cheque_amount']= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
-            $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
-            
-            $transactionDataComp=['dr_amount'=>0.00,'cr_amount'=>$data_arr['total_amount'],'description'=>$request->description,'entry_type'=>'cr','link_id'=>null,'link_name'=>null];
+                        
+            $transactionDataComp=['dr_amount'=>0.00,'cr_amount'=>$data_arr['total_amount'],'description'=>$request->description,'entry_type'=>'cr','link_id'=>null,'link_name'=>'opening_balance'];
             $company_ledger =new CompanyLedger();
             $res=$company_ledger->addCompanyTransaction($transactionDataComp);
             

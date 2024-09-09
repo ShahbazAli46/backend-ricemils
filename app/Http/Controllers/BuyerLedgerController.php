@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
 use Illuminate\Http\Request;
@@ -162,7 +163,7 @@ class BuyerLedgerController extends Controller
             $rem_blnc_amount=$previousBalance-$add_amount;
 
             DB::beginTransaction();
-
+            $comp_credit_amt=0;
             $transactionData=['customer_id'=>$request->buyer_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
             'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null, 'customer_type'=>'buyer','book_id'=>null,'entry_type'=>'cr','balance'=>$rem_blnc_amount];
@@ -173,12 +174,14 @@ class BuyerLedgerController extends Controller
                 $transactionData['cheque_date']= $request->cheque_date;
                 $transactionData['cheque_amount']= $cheque_amount;
             }else if($request->input('payment_type') == 'cash'){
+                $comp_credit_amt+=$cash_amount;
                 $transactionData['cash_amount']= $cash_amount;
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount']= $cash_amount;;
                 $transactionData['transection_id']= $request->transection_id;
                 $transactionData['bank_id'] = $request->bank_id;
             }else{
+                $comp_credit_amt+=$cash_amount;
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
@@ -187,13 +190,20 @@ class BuyerLedgerController extends Controller
             }
             
             $res=$buyer->addTransaction($transactionData);
-
             if(!$res){
                 DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Failed to Create Buyer Ledger.',
+                return response()->json(['status' => 'error','message' => 'Failed to Create Buyer Ledger.',
                 ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+
+            if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
+                //company ledger
+                $transactionDataComp=['dr_amount'=>0.00,'cr_amount'=>$comp_credit_amt,'description'=>$request->description,'entry_type'=>'cr','link_id'=>$res->id,'link_name'=>'buyer_ledger'];
+                $res=$buyer->addCompanyTransaction($transactionDataComp);
+                if(!$res){
+                    DB::rollBack();
+                    return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                }
             }
 
             DB::commit();
@@ -290,6 +300,7 @@ class BuyerLedgerController extends Controller
             $rem_blnc_amount=$previousBalance-$add_amount;
 
             DB::beginTransaction();
+            $comp_credit_amt=0;
             
             $transactionData=['id'=>$buyer_ledger->id,'model_name'=>'App\Models\CustomerLedger','bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
@@ -301,12 +312,14 @@ class BuyerLedgerController extends Controller
                 $transactionData['cheque_date']= $request->cheque_date;
                 $transactionData['cheque_amount']= $cheque_amount;
             }else if($request->input('payment_type') == 'cash'){
+                $comp_credit_amt+=$cash_amount;
                 $transactionData['cash_amount']= $cash_amount;
             }else if($request->input('payment_type') == 'online'){
                 $transactionData['cash_amount'] = $cash_amount;
                 $transactionData['transection_id'] = $request->transection_id;
                 $transactionData['bank_id'] = $request->bank_id;
             }else{
+                $comp_credit_amt+=$cash_amount;
                 $transactionData['bank_id'] = $request->bank_id;
                 $transactionData['cheque_no']= $request->cheque_no;
                 $transactionData['cheque_date']= $request->cheque_date;
@@ -315,6 +328,30 @@ class BuyerLedgerController extends Controller
             }
             
             $res=$buyer_ledger->updateTransaction($transactionData);
+            if($res->original['status']!='success'){
+                DB::rollBack();
+                return response()->json($res->original, Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            }
+
+            //company ledger update
+            $company_ledger=CompanyLedger::where('link_id',$id)->where('link_name','buyer_ledger')->first();
+            if($company_ledger){
+                if($request->payment_type=="cash" || $request->payment_type=="both"){
+                    $transactionDataComp=['id'=>$company_ledger->id,'dr_amount'=>0.00,'cr_amount'=>$comp_credit_amt,'description'=>$request->description];
+                    $buyer_ledger->updateCompanyTransaction($transactionDataComp);
+                }else{
+                    $buyer_ledger->deleteCompanyTransection($company_ledger->id);
+                }
+            }else{
+                if($request->payment_type=="cash" || $request->payment_type=="both"){
+                    $transactionDataComp=['dr_amount'=>0.00,'cr_amount'=>$comp_credit_amt,'description'=>$request->description,'entry_type'=>'cr','link_id'=>$buyer_ledger->id,'link_name'=>'buyer_ledger'];
+                    $res=$buyer_ledger->addCompanyTransaction($transactionDataComp);
+                    if(!$res){
+                        DB::rollBack();
+                        return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                    }
+                }
+            }
 
             if($res->original['status']=='success'){
                 DB::commit();

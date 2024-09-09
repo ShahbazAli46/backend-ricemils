@@ -40,7 +40,7 @@ class SaleBookController extends Controller
             'price_mann' => 'required|numeric|min:1',
             'weight' => 'required|numeric|min:1',
             'khoot' => 'required|numeric|min:0',
-            'chungi' => 'required|numeric|min:0',
+            'bardaana_deduction' => 'required|numeric|min:0',
             'salai_amt_per_bag' => 'required|numeric|min:0',
             'bardaana_quantity' => 'required|numeric|min:0',
             'product_description' => 'nullable|string',
@@ -100,7 +100,7 @@ class SaleBookController extends Controller
             }
 
 
-            $net_weight=($request->weight-($request->khoot+$request->chungi));
+            $net_weight=($request->weight-($request->khoot+$request->bardaana_deduction));
             $price = ($request->price_mann * $net_weight) / 40;
 
             
@@ -118,7 +118,7 @@ class SaleBookController extends Controller
                     'price_mann' => $request->price_mann,
                     'weight' => $request->weight,
                     'khoot' => $request->khoot,
-                    'chungi' => $request->chungi,
+                    'bardaana_deduction' => $request->bardaana_deduction,
                     'net_weight' => $net_weight,
                     'price' => $price,
                     'salai_amt_per_bag' => $request->salai_amt_per_bag,
