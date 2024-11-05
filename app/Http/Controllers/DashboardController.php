@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -70,4 +72,38 @@ class DashboardController extends Controller
         }
     }
 
+    public function drApi(Request $request)
+    {
+
+        if($request->has('start_date') && $request->has('end_date')){
+            $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+            
+            $expense_categories = ExpenseCategory::withSum(['expenses' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                }], 'total_amount')->get(); 
+
+            $data['start_date'] = $startDate;
+            $data['end_date'] = $endDate;
+
+        }else{
+            $expense_categories = ExpenseCategory::withSum('expenses', 'total_amount')->get();
+        }
+        $data['expense_categories'] = $expense_categories;
+
+        $suppliers = Customer::where('customer_type','supplier')->get();
+        $data['suppliers'] = $suppliers;
+
+        $banks = Bank::all();
+        $data['banks'] = $banks;
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function crApi()
+    {
+        $buyers = Customer::where('customer_type','buyer')->get();
+        $data['buyers'] = $buyers;
+        return response()->json(['data' => $data]);
+    }
 }

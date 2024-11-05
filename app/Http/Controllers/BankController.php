@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bank;
+use App\Models\CustomerLedger;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Response;
@@ -23,6 +24,37 @@ class BankController extends Controller
         return response()->json(['data' => $banks]);
     }
 
+    public function bankTransectionDetail(Request $request,$id){
+        try {
+            if($request->has('start_date') && $request->has('end_date')){
+                $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+
+
+                $bank = Bank::with(['customerLedger' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [$startDate, $endDate])
+                          ->with('customer'); // Load 'customer' within 'customerLedger' after filtering by date
+                }])->findOrFail($id);
+                
+                return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $bank]);
+            }else{
+                $bank = Bank::with('customerLedger.customer')->findOrFail($id);
+                return response()->json(['data' => $bank]);
+            }
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status'=>'error', 'message' => 'Bank Not Found.'], Response::HTTP_NOT_FOUND);
+        }
+
+
+        $bank=Bank::with('customerLedger.customer')->find($id);
+        if($bank){
+            return response()->json(['data' => $bank]);
+        }else{
+            return response()->json(['status'=>'error', 'message' => 'Bank Not Found.'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    
     /**
      * Store a newly created resource in storage.
      *

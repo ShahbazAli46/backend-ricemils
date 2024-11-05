@@ -36,6 +36,8 @@ Route::middleware('auth:sanctum')->group( function () {
     
     Route::apiResource('bank', BankController::class);
     Route::post('/bank/{id}', [BankController::class, 'update']);
+    Route::get('/bank/transection/detail/{id}', [BankController::class, 'bankTransectionDetail']);
+
     
     Route::apiResource('expense_category', ExpenseCategoryController::class);
     Route::post('/expense_category/{id}', [ExpenseCategoryController::class, 'update']);
@@ -58,6 +60,7 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::apiResource('sale_book', SaleBookController::class);
     Route::post('/sale_book/{id}', [SaleBookController::class, 'update']);
 
+
     Route::apiResource('buyer_ledger', BuyerLedgerController::class);
     Route::get('/received_buyer_amount', [BuyerLedgerController::class, 'receivedBuyerAmount']);
     Route::post('/buyer_ledger/{id}', [BuyerLedgerController::class, 'update']);
@@ -65,6 +68,9 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::apiResource('advance_cheque', AdvanceChequeController::class);
     Route::post('/advance_cheque/{id}', [AdvanceChequeController::class, 'update']);
     Route::get('/advance_cheque/is_deferred/{id}/{value}', [AdvanceChequeController::class, 'changeStatus'])->where('value', '0|1');
+    
+    Route::get('/dr/api', [DashboardController::class, 'drApi']);
+    Route::get('/cr/api', [DashboardController::class, 'crApi']);
 
     Route::apiResource('company_ledger', CompanyLedgerController::class);
 });
