@@ -74,7 +74,6 @@ class DashboardController extends Controller
 
     public function drApi(Request $request)
     {
-
         if($request->has('start_date') && $request->has('end_date')){
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
@@ -96,6 +95,9 @@ class DashboardController extends Controller
 
         $banks = Bank::all();
         $data['banks'] = $banks;
+
+        $cash_amt = CompanyLedger::where('entry_type', 'cr')->sum('cr_amount');
+        $data['cash'] = $cash_amt;
 
         return response()->json(['data' => $data]);
     }

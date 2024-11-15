@@ -59,21 +59,29 @@ trait CustomerLedgerTrait
             }
         }
 
-        if($tranData['customer_type']=='buyer' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr&cr')){
+        if($tranData['customer_type']=='buyer' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
             $bank=Bank::find($tranData['bank_id']);
             $add_amount=$tranData['cheque_amount'];
             if($tranData['payment_type']=='online'){
                 $add_amount=$tranData['cash_amount'];
             }
-            $bank->balance=$bank->balance+$add_amount;
+            if($tranData['entry_type']=='cr'){
+                $bank->balance=$bank->balance+$add_amount;
+            }else{
+                $bank->balance=$bank->balance-$add_amount;
+            }
             $bank->save();
-        }else if($tranData['customer_type']=='supplier' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr&cr')){
+        }else if($tranData['customer_type']=='supplier' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
             $bank=Bank::find($tranData['bank_id']);
             $dec_amount=$tranData['cheque_amount'];
             if($tranData['payment_type']=='online'){
                 $dec_amount=$tranData['cash_amount'];
             }
-            $bank->balance=$bank->balance-$dec_amount;
+            if($tranData['entry_type']=='dr'){
+                $bank->balance=$bank->balance+$dec_amount;
+            }else{
+                $bank->balance=$bank->balance-$dec_amount;
+            }
             $bank->save();
         }
     }
