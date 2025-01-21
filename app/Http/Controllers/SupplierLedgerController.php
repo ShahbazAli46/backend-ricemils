@@ -6,6 +6,7 @@ use App\Models\Bank;
 use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
+use App\Rules\CheckBankBalance;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Response;
@@ -124,23 +125,22 @@ class SupplierLedgerController extends Controller
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|not_in:0';
+
+            if($request->cash_amount>=1){
+                $rules['cheque_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+            }else{
+                $rules['cheque_amount']= ['required','numeric','not_in:0'];
+            }
+
             $rules['bank_tax']= 'required|numeric|min:0';
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|not_in:0';
         }else if($request->input('payment_type') == 'online'){
             if($request->cash_amount>=1){
-                $rules['cash_amount']= ['required','numeric', 
-                function ($attribute, $value, $fail) use ($request) {
-                    $bank = Bank::find($request->input('bank_id'));
-                    if ($bank && $value > $bank->balance) {
-                        $fail('The transection amount cannot be greater than the bank balance.');
-                    }
-                }];
+                $rules['cash_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
             }else{
                 $rules['cash_amount']= ['required','numeric','not_in:0'];
             }
-
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['bank_tax']= 'required|numeric|min:0';
@@ -148,7 +148,12 @@ class SupplierLedgerController extends Controller
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|not_in:0';
+            if($request->cash_amount>=1){
+                $rules['cheque_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+            }else{
+                $rules['cheque_amount']= ['required','numeric','not_in:0'];
+            }
+
             $rules['cash_amount']= 'required|numeric|not_in:0';
             $rules['bank_tax']= 'required|numeric|min:0';
         }

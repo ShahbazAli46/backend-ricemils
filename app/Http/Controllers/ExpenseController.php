@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bank;
 use App\Models\CompanyLedger;
 use App\Models\Expense;
+use App\Rules\CheckBankBalance;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
@@ -48,34 +49,51 @@ class ExpenseController extends Controller
             'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
         ];
-
+        $is_bank_entry=false;
         if ($request->input('payment_type') == 'cheque') {
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|min:1';
+            if($request->cash_amount>=1){
+                $rules['cheque_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+            }else{
+                $rules['cheque_amount']= ['required','numeric','min:1'];
+            }
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|min:1';
         }else if($request->input('payment_type') == 'online'){
-            $rules['cash_amount']= 'required|numeric|min:1';
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
+            if($request->cash_amount>=1){
+                $rules['cash_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+            }else{
+                $rules['cash_amount']= ['required','numeric','min:1'];
+            }
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|min:1';
+            if($request->cash_amount>=1){
+                $rules['cheque_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+            }else{
+                $rules['cheque_amount']= ['required','numeric','min:1'];
+            }
             $rules['cash_amount']= 'required|numeric|min:1';
+            $is_bank_entry=true;
+            $check_bank_arr['bank_id']=$request->input('bank_id');
+            $check_bank_arr['given_balance']=$request->input('cheque_amount');
         }
-
 
         $validator = Validator::make($request->all(), $rules);
         
         if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first(),
-            ],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
+            return response()->json(['status' => 'error','message' => $validator->errors()->first()],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
+        }
+        //check bank balance
+        if($is_bank_entry){
+            if (!$this->checkBankBalance($check_bank_arr['bank_id'], $check_bank_arr['given_balance'])) {
+                return response()->json(['status' => 'error','message' => 'Insufficient bank balance.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
         }
         
         try {

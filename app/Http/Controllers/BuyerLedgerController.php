@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
+use App\Rules\CheckBankBalance;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Response;
@@ -109,24 +110,36 @@ class BuyerLedgerController extends Controller
             'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
         ];        
-
         if ($request->input('payment_type') == 'cheque') {
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
             $rules['cheque_amount']= 'required|numeric|not_in:0';
+            if($request->cash_amount<0){
+                $rules['cheque_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+            }else{
+                $rules['cheque_amount']= ['required','numeric','not_in:0'];
+            }
         }else if($request->input('payment_type') == 'cash'){
             $rules['cash_amount']= 'required|numeric|not_in:0';
         }else if($request->input('payment_type') == 'online'){
-            $rules['cash_amount']= 'required|numeric|not_in:0';
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
+            if($request->cash_amount<0){
+                $rules['cash_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+            }else{
+                $rules['cash_amount']= ['required','numeric','not_in:0'];
+            }
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
-            $rules['cheque_amount']= 'required|numeric|not_in:0';
             $rules['cash_amount']= 'required|numeric|not_in:0';
+            if($request->cash_amount<0){
+                $rules['cheque_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+            }else{
+                $rules['cheque_amount']= ['required','numeric','not_in:0'];
+            }
         }
 
         $validator = Validator::make($request->all(), $rules);
