@@ -28,7 +28,7 @@ return new class extends Migration
             $table->decimal('cheque_amount', 15, 2)->default(0.00);
             $table->string('cheque_no',100)->nullable();
             $table->date('cheque_date')->nullable();
-            $table->enum('customer_type',['supplier','buyer']);
+            $table->enum('customer_type',['supplier','buyer','investor']);
             $table->unsignedBigInteger('book_id')->nullable();
             $table->enum('entry_type',['dr','cr','adv','dr&cr']);
             $table->decimal('balance', 15, 2)->default(0.00);

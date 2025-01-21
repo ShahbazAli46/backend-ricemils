@@ -70,6 +70,7 @@ class BuyerController extends Controller
             $transactionData=['customer_id'=>$customer->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>0.00,'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>null,'balance'=>$openingBalance];
             if($openingBalance>=1){
                 $transactionData['dr_amount']=$openingBalance;
+                $transactionData['cash_amount']=$openingBalance;
                 $transactionData['entry_type']='dr';
             }else{
                 $transactionData['cr_amount']=$openingBalance;

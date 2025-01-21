@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, DashboardController};
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, DashboardController, InvestorController, InvestorLedgerController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,6 +25,11 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::apiResource('buyer', BuyerController::class);
     Route::post('/buyer/{id}', [BuyerController::class, 'update']);
     
+    Route::apiResource('investor', InvestorController::class);
+    Route::apiResource('investor_ledger', InvestorLedgerController::class);
+    Route::get('/received_investor_amount', [InvestorLedgerController::class, 'receivedInvestorAmount']);
+    // Route::post('/investor_ledger/{id}', [InvestorLedgerController::class, 'update']);
+
     Route::apiResource('product', ProductController::class);
     Route::post('/product/{id}', [ProductController::class, 'update']);
     
