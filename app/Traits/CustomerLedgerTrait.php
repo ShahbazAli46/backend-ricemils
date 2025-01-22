@@ -26,7 +26,6 @@ trait CustomerLedgerTrait
         // Find the customer by ID
         $customer = Customer::find($tranData['customer_id']);
         if (!$customer) {
-            // throw new \Exception("Customer not found");
             return 0;
         }
         $res=CustomerLedger::create($tranData);

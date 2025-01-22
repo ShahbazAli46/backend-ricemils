@@ -30,7 +30,6 @@ class BankController extends Controller
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
-
                 $bank = Bank::with(['customerLedger' => function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('created_at', [$startDate, $endDate])
                           ->with('customer'); // Load 'customer' within 'customerLedger' after filtering by date
@@ -44,7 +43,6 @@ class BankController extends Controller
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Bank Not Found.'], Response::HTTP_NOT_FOUND);
         }
-
 
         $bank=Bank::with('customerLedger.customer')->find($id);
         if($bank){

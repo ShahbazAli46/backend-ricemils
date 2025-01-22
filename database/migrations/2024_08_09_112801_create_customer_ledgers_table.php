@@ -30,7 +30,7 @@ return new class extends Migration
             $table->date('cheque_date')->nullable();
             $table->enum('customer_type',['supplier','buyer','investor']);
             $table->unsignedBigInteger('book_id')->nullable();
-            $table->enum('entry_type',['dr','cr','adv','dr&cr']);
+            $table->enum('entry_type',['dr','cr','adv','dr&cr','op']);
             $table->decimal('balance', 15, 2)->default(0.00);
             $table->timestamps();
         });

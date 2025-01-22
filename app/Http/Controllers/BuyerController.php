@@ -39,7 +39,7 @@ class BuyerController extends Controller
             'contact' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:100',
             'firm_name' => 'nullable|string|max:100',
-            'opening_balance' => 'nullable|numeric|min:0',
+            'opening_balance' => 'nullable|numeric',
             'description' => 'nullable|string'
         ]);
         
@@ -70,12 +70,10 @@ class BuyerController extends Controller
             $transactionData=['customer_id'=>$customer->id,'bank_id'=>null,'description'=>'Opening Balance','dr_amount'=>0.00,'cr_amount'=>0.00,'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>'cash','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>null,'balance'=>$openingBalance];
             if($openingBalance>=1){
                 $transactionData['dr_amount']=$openingBalance;
-                $transactionData['cash_amount']=$openingBalance;
-                $transactionData['entry_type']='dr';
+                $transactionData['entry_type']='op';
             }else{
-                $transactionData['cr_amount']=$openingBalance;
-                $transactionData['cash_amount']=$openingBalance;
-                $transactionData['entry_type']='cr';
+                $transactionData['cr_amount']=abs($openingBalance);
+                $transactionData['entry_type']='op';
             }
 
             $res=$customer->addTransaction($transactionData);
@@ -125,7 +123,7 @@ class BuyerController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [ 
             'person_name' => 'required|string|max:100',
             'refference_id' => ['nullable','exists:customers,id'],
             'contact' => 'nullable|string|max:100',
