@@ -49,29 +49,20 @@ class SaleBookController extends Controller
         $validator = Validator::make($request->all(), $rules);
         
         if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first(),
-            ],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
+            return response()->json(['status' => 'error','message' => $validator->errors()->first(),],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
         }
 
         try {
             $nextRes=$this->getNextRefNo();
             if($request->id!=$nextRes->original['next_id']){
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Ref Id is Invalid.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                return response()->json(['status' => 'error','message' => 'Ref Id is Invalid.',], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
             DB::beginTransaction();
 
             // Validate buyer existence
-            $buyer = Customer::where(['id' => $request->buyer_id, 'customer_type' => 'buyer'])->first();
+            $buyer = Customer::where(['id' => $request->buyer_id, 'customer_type' => 'party'])->first();
             if (!$buyer) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Buyer Does Not Exist.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                return response()->json(['status' => 'error','message' => 'Party Does Not Exist.',], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
         
             // Validate product existence
@@ -131,10 +122,7 @@ class SaleBookController extends Controller
             // Check if SaleBookDetail was created or updated
             if (!$saleBookDetail) {
                 DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Failed to Add Item on Sale Order.',
-                ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                return response()->json(['status' => 'error','message' => 'Failed to Add Item on Sale Order.',], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
         
             // Recalculate and update total amount of SaleBook
@@ -145,20 +133,12 @@ class SaleBookController extends Controller
             $saleBookObj = SaleBook::with(['details'])->find($request->id);
 
             DB::commit();
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Item Successfully Added to Sale Order.',
-                'data' => $saleBookObj,
-            ], Response::HTTP_CREATED);
+            return response()->json(['status' => 'success','message' => 'Item Successfully Added to Sale Order.','data' => $saleBookObj,], Response::HTTP_CREATED);
 
         } catch (Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to Add Sale Order. ' . $e->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return response()->json(['status' => 'error','message' => 'Failed to Add Sale Order. ' . $e->getMessage(),], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
-
     }
 
     public function RemoveItem($id){
@@ -177,11 +157,7 @@ class SaleBookController extends Controller
                 $saleBook->save();
                 
                 DB::commit();
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'Item Removed Successfully.',
-                    'data' => $saleBook,
-                ], Response::HTTP_CREATED);
+                return response()->json(['status' => 'success','message' => 'Item Removed Successfully.','data' => $saleBook,], Response::HTTP_CREATED);
             }else{
                 return response()->json([
                     'status' => 'error',
@@ -227,10 +203,10 @@ class SaleBookController extends Controller
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
-            $sale_book = SaleBook::with(['details','buyer:id,person_name'])->whereBetween('date', [$startDate, $endDate])->get();
+            $sale_book = SaleBook::with(['details','party:id,person_name'])->whereBetween('date', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $sale_book]);
         }else{
-            $sale_book=SaleBook::with(['details','buyer:id,person_name'])->get();
+            $sale_book=SaleBook::with(['details','party:id,person_name'])->get();
             return response()->json(['data' => $sale_book]);
         }
     }
@@ -249,10 +225,7 @@ class SaleBookController extends Controller
 
         $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first(),
-            ],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
+            return response()->json(['status' => 'error','message' => $validator->errors()->first(),],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
         }
 
         try {
@@ -261,10 +234,7 @@ class SaleBookController extends Controller
             $saleBook=SaleBook::with(['details'])->where(['id'=>$request->sale_book_id,'order_status'=>'cart'])->first();
             if($saleBook){
                 if($saleBook->details()->count()<=0){
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Sale Book Cart is Empty.',
-                    ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                    return response()->json(['status' => 'error','message' => 'Sale Book Cart is Empty.',], Response::HTTP_UNPROCESSABLE_ENTITY);
                 }
 
                 $saleBook->order_status='completed';
@@ -282,36 +252,25 @@ class SaleBookController extends Controller
                 }
                 $totalWithPreBlnc=$previousBalance+$saleBook->total_amount;
 
-                $transactionData=['customer_id'=>$saleBook->buyer_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$saleBook->total_amount,'cr_amount'=>0.00,
+                $transactionData=['customer_id'=>$saleBook->buyer_id,'bank_id'=>null,'description'=>null,'dr_amount'=>0.00,'cr_amount'=>$saleBook->total_amount,
                 'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>'Cash','cheque_amount'=>0.00,
-                'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'buyer','book_id'=>$saleBook->id,'entry_type'=>'dr','balance'=>$totalWithPreBlnc];
+                'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'party','book_id'=>$saleBook->id,'entry_type'=>'cr','balance'=>$totalWithPreBlnc];
                 
                 $res=$saleBook->addTransaction($transactionData);
                 if(!$res){
                     DB::rollBack();
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Something Went Wrong Please Try Again Later.',
-                    ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                    return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.',], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
                 }
 
                 DB::commit();
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'Order Completed Successfully.',
-                ], Response::HTTP_CREATED);
+                return response()->json(['status' => 'success','message' => 'Order Completed Successfully.',], Response::HTTP_CREATED);
             }else{
                 DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Sale Book Does Not Exist.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                return response()->json(['status' => 'error','message' => 'Sale Book Does Not Exist.',], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
         } catch (Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to Add Sale Order. ' . $e->getMessage(),
+            return response()->json(['status' => 'error','message' => 'Failed to Add Sale Order. ' . $e->getMessage(),
             ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
     }
@@ -325,7 +284,7 @@ class SaleBookController extends Controller
     public function show($id)
     {
         try {
-            $sale_book = SaleBook::with(['details','buyer'])->findOrFail($id);
+            $sale_book = SaleBook::with(['details','party'])->findOrFail($id);
             return response()->json(['data' => $sale_book]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Sale Order Not Found.'], Response::HTTP_NOT_FOUND);

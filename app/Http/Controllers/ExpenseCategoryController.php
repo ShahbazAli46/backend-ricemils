@@ -47,15 +47,9 @@ class ExpenseCategoryController extends Controller
                 'expense_category' => $request->input('expense_category'),
             ]);
     
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Expense Category Created Successfully.',
-            ], Response::HTTP_CREATED); // 201 Created
+            return response()->json(['status' => 'success','message' => 'Expense Category Created Successfully.',], Response::HTTP_CREATED); // 201 Created
         } catch (Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to Create Expense Category. ' . $e->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return response()->json(['status' => 'error','message' => 'Failed to Create Expense Category. ' . $e->getMessage(),], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
     }
 
@@ -104,10 +98,7 @@ class ExpenseCategoryController extends Controller
         ]);
         
         if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first(),
-            ],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
+            return response()->json(['status' => 'error','message' => $validator->errors()->first(),],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
         }
         
         try {
@@ -117,10 +108,7 @@ class ExpenseCategoryController extends Controller
                 'expense_category' => $request->input('expense_category'),
             ]);
     
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Expense Category Updated Successfully.',
-            ], Response::HTTP_OK); // 200 OK
+            return response()->json(['status' => 'success','message' => 'Expense Category Updated Successfully.',], Response::HTTP_OK); // 200 OK
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Expense Category Not Found.'], Response::HTTP_NOT_FOUND);
         } catch (Exception $e) {

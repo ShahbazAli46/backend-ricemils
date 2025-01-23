@@ -27,7 +27,7 @@ class SaleBook extends Model
     }
 
     // Define the relationship with the Buyer (Customer) model
-    public function buyer()
+    public function party()
     {
         return $this->belongsTo(Customer::class, 'buyer_id');
     }

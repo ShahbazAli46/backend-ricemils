@@ -24,7 +24,7 @@ class PurchaseBook extends Model
     }
 
     // Define the relationship with the Supplier (Customer) model
-    public function supplier()
+    public function party()
     {
         return $this->belongsTo(Customer::class, 'sup_id');
     }

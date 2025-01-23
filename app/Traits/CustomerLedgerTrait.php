@@ -40,21 +40,14 @@ trait CustomerLedgerTrait
             $data_row=$className::find($tranData['id']);
             if($data_row->payment_type=='cheque' || $data_row->payment_type=='both' || $data_row->payment_type=='online'){
                 $bank=Bank::find($data_row->bank_id);
-                if($tranData['customer_type']=='buyer' && ($data_row->entry_type=='cr' || $data_row->entry_type=='dr&cr')){
+                if($tranData['customer_type']=='investor' && ($data_row->entry_type=='cr' || $data_row->entry_type=='dr&cr')){
                     $dec_amount=$data_row->cheque_amount;
                     if($tranData['payment_type']=='online'){
                         $dec_amount=$data_row->cash_amount;
                     }
-                    $bank->balance=$bank->balance-$dec_amount;
+                    $bank->balance=$bank->balance+$dec_amount;
                     $bank->save();
-                }else if($tranData['customer_type']=='supplier' && ($data_row->entry_type=='cr' || $data_row->entry_type=='dr&cr' || $className == 'App\Models\Expense')){
-                    $add_amount=$data_row->cheque_amount;
-                    if($tranData['payment_type']=='online'){
-                        $add_amount=$data_row->cash_amount;
-                    }
-                    $bank->balance=$bank->balance+$add_amount;
-                    $bank->save();
-                }else if($tranData['customer_type']=='investor' && ($data_row->entry_type=='cr' || $data_row->entry_type=='dr&cr')){
+                }else if($tranData['customer_type']=='party' && ($data_row->entry_type=='cr' || $data_row->entry_type=='dr&cr' || $className == 'App\Models\Expense')){
                     $dec_amount=$data_row->cheque_amount;
                     if($tranData['payment_type']=='online'){
                         $dec_amount=$data_row->cash_amount;
@@ -65,31 +58,7 @@ trait CustomerLedgerTrait
             }
         }
 
-        if($tranData['customer_type']=='buyer' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
-            $bank=Bank::find($tranData['bank_id']);
-            $add_amount=$tranData['cheque_amount'];
-            if($tranData['payment_type']=='online'){
-                $add_amount=$tranData['cash_amount'];
-            }
-            if($tranData['entry_type']=='cr'){
-                $bank->balance=$bank->balance+$add_amount;
-            }else{
-                $bank->balance=$bank->balance-$add_amount;
-            }
-            $bank->save();
-        }else if($tranData['customer_type']=='supplier' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
-            $bank=Bank::find($tranData['bank_id']);
-            $dec_amount=$tranData['cheque_amount'];
-            if($tranData['payment_type']=='online'){
-                $dec_amount=$tranData['cash_amount'];
-            }
-            if($tranData['entry_type']=='dr'){
-                $bank->balance=$bank->balance+$dec_amount;
-            }else{
-                $bank->balance=$bank->balance-$dec_amount;
-            }
-            $bank->save();
-        }else if($tranData['customer_type']=='investor' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
+        if($tranData['customer_type']=='investor' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
             $bank=Bank::find($tranData['bank_id']);
             $add_amount=$tranData['cheque_amount'];
             if($tranData['payment_type']=='online'){
@@ -100,6 +69,26 @@ trait CustomerLedgerTrait
             }else{
                 $bank->balance=$bank->balance+$add_amount;
             }
+            $bank->save();
+
+        }else if($tranData['customer_type']=='party' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
+            $bank=Bank::find($tranData['bank_id']);
+            $add_amount=$tranData['cheque_amount'];
+            if($tranData['payment_type']=='online'){
+                $add_amount=$tranData['cash_amount'];
+            }
+
+
+            if($tranData['entry_type']=='cr'){
+                $bank->balance=$bank->balance-$add_amount;
+            }else{
+                if($tranData['entry_type']=='dr&cr'){
+                    $add_amount = $add_amount * -1; 
+                }
+                $bank->balance=$bank->balance+$add_amount;
+            }
+
+
             $bank->save();
         }
     }

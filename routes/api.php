@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, DashboardController, InvestorController, InvestorLedgerController};
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,11 +19,11 @@ Route::post('login', [AuthController::class,'login']);
 Route::middleware('auth:sanctum')->group( function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    Route::apiResource('supplier', SupplierController::class);
-    Route::post('/supplier/{id}', [SupplierController::class, 'update']);
+    // Route::apiResource('supplier', SupplierController::class);
+    // Route::post('/supplier/{id}', [SupplierController::class, 'update']);
     
-    Route::apiResource('buyer', BuyerController::class);
-    Route::post('/buyer/{id}', [BuyerController::class, 'update']);
+    // Route::apiResource('buyer', BuyerController::class);
+    // Route::post('/buyer/{id}', [BuyerController::class, 'update']);
     
     Route::apiResource('investor', InvestorController::class);
     Route::apiResource('investor_ledger', InvestorLedgerController::class);
@@ -51,11 +51,20 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::post('/expense/{id}', [ExpenseController::class, 'update']);
     
     Route::apiResource('purchase_book', PurchaseBookController::class);
-    Route::post('/purchase_book/{id}', [PurchaseBookController::class, 'update']);
+    // Route::post('/purchase_book/{id}', [PurchaseBookController::class, 'update']);
     
-    Route::apiResource('supplier_ledger', SupplierLedgerController::class);
-    Route::get('/get_supplier_paid_amount', [SupplierLedgerController::class, 'getSupplierPaidAmount']);
-    Route::post('/supplier_ledger/{id}', [SupplierLedgerController::class, 'update']);
+    // Route::apiResource('supplier_ledger', SupplierLedgerController::class);
+    // Route::get('/get_supplier_paid_amount', [SupplierLedgerController::class, 'getSupplierPaidAmount']);
+    // Route::post('/supplier_ledger/{id}', [SupplierLedgerController::class, 'update']);
+
+    Route::apiResource('party', PartyController::class);
+    Route::post('/party/{id}', [PartyController::class, 'update']);
+    
+    Route::apiResource('party_ledger', PartyLedgerController::class);
+    // Route::get('/get_supplier_paid_amount', [PartyLedgerController::class, 'getSupplierPaidAmount']);
+    // Route::get('/received_buyer_amount', [BuyerLedgerController::class, 'receivedBuyerAmount']);
+    Route::post('/party_ledger/{id}', [PartyLedgerController::class, 'update']);
+
 
     Route::get('/sale_book/get_next_ref_no', [SaleBookController::class, 'getNextRefNo']);
     Route::post('/sale_book/add_item', [SaleBookController::class, 'AddItem']);
@@ -66,9 +75,9 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::post('/sale_book/{id}', [SaleBookController::class, 'update']);
 
 
-    Route::apiResource('buyer_ledger', BuyerLedgerController::class);
-    Route::get('/received_buyer_amount', [BuyerLedgerController::class, 'receivedBuyerAmount']);
-    Route::post('/buyer_ledger/{id}', [BuyerLedgerController::class, 'update']);
+    // Route::apiResource('buyer_ledger', BuyerLedgerController::class);
+    // Route::get('/received_buyer_amount', [BuyerLedgerController::class, 'receivedBuyerAmount']);
+    // Route::post('/buyer_ledger/{id}', [BuyerLedgerController::class, 'update']);
 
     Route::apiResource('advance_cheque', AdvanceChequeController::class);
     Route::post('/advance_cheque/{id}', [AdvanceChequeController::class, 'update']);

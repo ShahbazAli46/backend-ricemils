@@ -116,7 +116,7 @@ class ExpenseController extends Controller
             $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
             $expense = Expense::create($data_arr);
 
-            $data_arr['customer_type']='supplier'; 
+            $data_arr['customer_type']='party'; 
             $data_arr['entry_type']='cr';
             $expense->reCalculateBankBalance($data_arr);
 
