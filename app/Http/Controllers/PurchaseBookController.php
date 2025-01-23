@@ -62,6 +62,7 @@ class PurchaseBookController extends Controller
             'price_mann' => 'required|numeric|min:1',
             'date' => 'nullable|date',
             'payment_type' => 'required|in:cash,cheque,both,online',
+            'description'=> 'nullable|string',
         ];   
         
         if ($request->input('payment_type') == 'cheque') {
@@ -71,7 +72,7 @@ class PurchaseBookController extends Controller
             $rules['bank_tax']= 'required|numeric|min:0';
             $rules['cheque_amount']= ['required','numeric','min:1', new CheckBankBalance($request->input('bank_id'))];
         }else if($request->input('payment_type') == 'cash'){
-            $rules['cash_amount']= ['required','numeric','min:1',new CheckCashBalance()];
+            $rules['cash_amount']= ['required','numeric','min:0',new CheckCashBalance()];
         }else if($request->input('payment_type') == 'online'){
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cash_amount']= ['required','numeric','min:1', new CheckBankBalance($request->input('bank_id'))];
@@ -160,6 +161,7 @@ class PurchaseBookController extends Controller
                 'net_amount' => $add_amount,
                 'total_amount' => $total_amount,
                 'rem_amount' => $rem_amount,
+                'description' => $request->description,
             ]);
 
             if (!$purchaseBook) {
@@ -167,7 +169,7 @@ class PurchaseBookController extends Controller
                 return response()->json(['status' => 'error','message' => 'Failed to Add Purchase Order.',], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
-            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>null,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
+            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
             'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'party','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_blnc_amount];
             
@@ -202,7 +204,7 @@ class PurchaseBookController extends Controller
 
             if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
                 //company ledger
-                $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>null,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
+                $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
                 $res=$purchaseBook->addCompanyTransaction($transactionDataComp);
                 if(!$res){
                     DB::rollBack();
