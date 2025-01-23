@@ -221,6 +221,7 @@ class SaleBookController extends Controller
     {
         $rules = [
             'sale_book_id' => ['required','exists:sale_book,id'],
+            'description'=> 'nullable|string',
         ];  
 
         $validator = Validator::make($request->all(), $rules);
@@ -238,6 +239,7 @@ class SaleBookController extends Controller
                 }
 
                 $saleBook->order_status='completed';
+                $saleBook->description=$request->description;
                 $saleBook->save();
                 $saleBook->details()->update(['order_status' => 'completed']);
 
@@ -252,7 +254,7 @@ class SaleBookController extends Controller
                 }
                 $totalWithPreBlnc=$previousBalance+$saleBook->total_amount;
 
-                $transactionData=['customer_id'=>$saleBook->buyer_id,'bank_id'=>null,'description'=>null,'dr_amount'=>0.00,'cr_amount'=>$saleBook->total_amount,
+                $transactionData=['customer_id'=>$saleBook->buyer_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$saleBook->total_amount,
                 'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>'Cash','cheque_amount'=>0.00,
                 'cheque_no'=>null,'cheque_date'=>null,'customer_type'=>'party','book_id'=>$saleBook->id,'entry_type'=>'cr','balance'=>$totalWithPreBlnc];
                 
