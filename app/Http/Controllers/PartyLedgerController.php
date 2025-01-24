@@ -49,10 +49,10 @@ class PartyLedgerController extends Controller
             if($request->has('start_date') && $request->has('end_date')){
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                $party_ledger = CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','party')->whereBetween('created_at', [$startDate, $endDate])->get();
+                $party_ledger = CustomerLedger::with(['customer:id,person_name,customer_type','bank:id,bank_name'])->where('customer_type','party')->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $party_ledger]);
             }else{
-                $party_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','party')->get();
+                $party_ledger =CustomerLedger::with(['customer:id,person_name,customer_type','bank:id,bank_name'])->where('customer_type','party')->get();
                 return response()->json(['data' => $party_ledger]);
             }
         }
@@ -60,14 +60,21 @@ class PartyLedgerController extends Controller
 
     public function receivedPartyAmount(Request $request)
     {   
-        if($request->has('party_id')){
-            $customer=Customer::with(['reference:id,person_name,customer_type'])->where('customer_type','party')->where('id',$request->party_id)->first();
+        if($request->has('party_id') || $request->has('investor_id')){
+            if ($request->has('party_id')) {
+                $customer_id=$request->party_id;
+                $customer_type='party';
+            }else if($request->has('investor_id')){
+                $customer_id=$request->investor_id;
+                $customer_type='investor';
+            }
+            $customer=Customer::with(['reference:id,person_name,customer_type'])->where('customer_type',$customer_type)->where('id',$customer_id)->first();
             if($customer){
                 if($request->has('start_date') && $request->has('end_date')){
                     $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                     $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
                     $customer->ledgers= $customer->load(['ledgers' => function($query) use ($startDate, $endDate) {
-                        $query->where('entry_type', 'cr')
+                        $query->whereIn('entry_type', ['dr','dr&cr'])
                               ->whereBetween('created_at', [$startDate, $endDate])
                               ->with('bank:id,bank_name'); // Include bank details
                     }]);
@@ -75,28 +82,82 @@ class PartyLedgerController extends Controller
                     return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
                 }else{
                     $customer->ledgers= $customer->load(['ledgers' => function($query) {
-                        $query->where('entry_type', 'cr')
+                        $query->whereIn('entry_type', ['dr','dr&cr'])
                               ->with('bank:id,bank_name'); // Include bank details
                     }]);
                     // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->get();
                     return response()->json(['data' => $customer]);
                 }
             }else{
-                return response()->json(['status'=>'error', 'message' => 'Pparty Not Found.'], Response::HTTP_NOT_FOUND);
+                return response()->json(['status'=>'error', 'message' => $customer_type.' not found.'], Response::HTTP_NOT_FOUND);
             }
         }else{
             if($request->has('start_date') && $request->has('end_date')){
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                $party_ledger = CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','party')->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+                $party_ledger = CustomerLedger::with(['customer:id,person_name,customer_type','bank:id,bank_name'])->whereIn('customer_type',['party','investor'])->whereIn('entry_type', ['dr','dr&cr'])->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $party_ledger]);
             }else{
-                $party_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('entry_type','cr')->where('customer_type','party')->get();
+                $party_ledger =CustomerLedger::with(['customer:id,person_name,customer_type','bank:id,bank_name'])->whereIn('entry_type', ['dr','dr&cr'])->whereIn('customer_type',['party','investor'])->get();
                 return response()->json(['data' => $party_ledger]);
             }
         }
     }
+
+    public function paidPartyAmount(Request $request)
+    {   
+        if($request->has('party_id') || $request->has('investor_id')){
+            if ($request->has('party_id')) {
+                $customer_id=$request->party_id;
+                $customer_type='party';
+            }else if($request->has('investor_id')){
+                $customer_id=$request->investor_id;
+                $customer_type='investor';
+            }
+            $customer=Customer::with(['reference:id,person_name,customer_type'])->where('customer_type',$customer_type)->where('id',$customer_id)->first();
+            if($customer){
+                if($request->has('start_date') && $request->has('end_date')){
+                    $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                    $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+                    $customer->ledgers= $customer->load(['ledgers' => function($query) use ($startDate, $endDate) {
+                        $query->where(function ($query) {
+                            $query->where('entry_type', 'cr');
+                        })->whereBetween('created_at', [$startDate, $endDate])->with('bank:id,bank_name'); // Include bank details
+                    }]);
+                    // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+                    return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
+                }else{
+                    $customer->ledgers= $customer->load(['ledgers' => function($query) {
+                        $query->where(function ($query) {
+                            $query->where('entry_type', 'cr');
+                        })->with('bank:id,bank_name'); // Include bank details
+                    }]);
+                    // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->get();
+                    return response()->json(['data' => $customer]);
+                }
+            }else{
+                return response()->json(['status'=>'error', 'message' => $customer_type.' not found.'], Response::HTTP_NOT_FOUND);
+            }
+        }else{
+            if($request->has('start_date') && $request->has('end_date')){
+                $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
     
+                $customer_ledger = CustomerLedger::with(['customer:id,person_name,customer_type','bank:id,bank_name'])
+                ->where(function ($query) {
+                    $query->where('entry_type', 'cr');
+                })->whereIn('customer_type',['party','investor'])->whereBetween('created_at', [$startDate, $endDate])->get();
+                return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer_ledger]);
+            }else{
+                $customer_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])
+                ->where(function ($query) {
+                    $query->where('entry_type', 'cr');
+                })->whereIn('customer_type',['party','investor'])->get();
+                return response()->json(['data' => $customer_ledger]);
+            }
+        }
+    }
+
     /**
      * Store a newly created resource in storage.
      *

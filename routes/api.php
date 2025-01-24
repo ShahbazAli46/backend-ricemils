@@ -61,8 +61,8 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::post('/party/{id}', [PartyController::class, 'update']);
     
     Route::apiResource('party_ledger', PartyLedgerController::class);
-    // Route::get('/get_supplier_paid_amount', [PartyLedgerController::class, 'getSupplierPaidAmount']);
-    // Route::get('/received_buyer_amount', [BuyerLedgerController::class, 'receivedBuyerAmount']);
+    Route::get('/paid_party_amount', [PartyLedgerController::class, 'paidPartyAmount']);
+    Route::get('/received_party_amount', [PartyLedgerController::class, 'receivedPartyAmount']);
     Route::post('/party_ledger/{id}', [PartyLedgerController::class, 'update']);
 
 
