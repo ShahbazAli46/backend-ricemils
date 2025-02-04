@@ -288,6 +288,7 @@ class SaleBookController extends Controller
                     $stock = CompanyProductStock::where(['product_id'=> $detail->pro_id])->latest()->first();
                     $old_total_weight=$stock?$stock->total_weight:0;
                     $old_remaining_weight=$stock?$stock->remaining_weight:0;
+                    $old_balance=$stock?$stock->balance:0;
                     CompanyProductStock::create([
                         'product_id' => $detail->pro_id,
                         'total_weight' => $old_total_weight,
@@ -299,6 +300,8 @@ class SaleBookController extends Controller
                         'price' => $detail->price,
                         'price_mann' => $detail->price_mann,
                         'total_amount' => $detail->total_amount,
+                        'balance' => $old_balance-$detail->total_amount,
+                        'party_id' => $saleBook->buyer_id
                     ]);
                 }
 

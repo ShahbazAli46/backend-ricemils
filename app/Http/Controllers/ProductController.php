@@ -21,7 +21,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $products=Product::with(['companyProductStocks' => function ($query) {
-            $query->select('id', 'product_id', 'total_weight', 'remaining_weight')
+            $query->select('id', 'product_id', 'total_weight', 'remaining_weight','balance')
                 ->whereIn('id', function ($subQuery) {
                     $subQuery->select(DB::raw('MAX(id)'))->from('company_product_stocks')->groupBy('product_id');
                 });
@@ -70,6 +70,7 @@ class ProductController extends Controller
                 'price' => $request->opening_price,
                 'price_mann' => $request->opening_price_mann,
                 'total_amount' => $request->opening_total_amount,
+                'balance' => $request->opening_total_amount,
             ]);
 
             DB::commit();
@@ -89,13 +90,21 @@ class ProductController extends Controller
     public function show(Request $request,$id)
     {
         try {
-            $product = Product::with(['companyProductStocks'=>function($query) use ($request){
-                if ($request->has('start_date') && $request->has('end_date')) {
-                    $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
-                    $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay(); // Use endOfDay to include the entire day
-                    $query->whereBetween('created_at', [$startDate, $endDate]);
-                }
+            $product = Product::with(['companyProductStocks' => function ($query) {
+            $query->select('id', 'product_id', 'total_weight', 'remaining_weight','balance')
+                ->whereIn('id', function ($subQuery) {
+                    $subQuery->select(DB::raw('MAX(id)'))->from('company_product_stocks')->groupBy('product_id');
+                });
             }])->findOrFail($id);
+
+            $com_pro_stock_query=CompanyProductStock::with('party')->where('product_id',$id);
+            if ($request->has('start_date') && $request->has('end_date')) {
+                $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay(); // Use endOfDay to include the entire day
+                $com_pro_stock_query->whereBetween('created_at', [$startDate, $endDate]);
+            }
+            $product->company_product_stock_details=$com_pro_stock_query->get();
+            
             return response()->json(['data' => $product]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Product Not Found.'], Response::HTTP_NOT_FOUND);

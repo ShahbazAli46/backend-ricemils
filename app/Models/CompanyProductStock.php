@@ -11,7 +11,7 @@ class CompanyProductStock extends Model
     public $table="company_product_stocks";
 
     protected $fillable = [
-        'product_id', 'total_weight', 'stock_in', 'stock_out','remaining_weight', 'linkable_id', 'linkable_type','entry_type','price','price_mann','total_amount'
+        'product_id', 'total_weight', 'stock_in', 'stock_out','remaining_weight', 'linkable_id', 'linkable_type','entry_type','price','price_mann','total_amount','balance','party_id'
     ];
 
     public function product()
@@ -22,5 +22,10 @@ class CompanyProductStock extends Model
     public function linkable()
     {
         return $this->morphTo();
+    }
+
+    public function party()
+    {
+        return $this->belongsTo(Customer::class, 'party_id','');
     }
 }

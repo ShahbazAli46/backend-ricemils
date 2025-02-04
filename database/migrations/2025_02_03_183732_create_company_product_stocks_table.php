@@ -27,6 +27,7 @@ return new class extends Migration
             $table->decimal('price', 15, 2)->default(0.00);
             $table->decimal('price_mann', 15, 2)->default(0.00);
             $table->decimal('total_amount', 15, 2)->default(0.00);
+            $table->decimal('balance', 15, 2)->default(0.00);
             $table->timestamps();
         });
     }
