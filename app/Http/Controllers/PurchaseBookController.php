@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bank;
 use App\Models\CompanyLedger;
+use App\Models\CompanyProductStock;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Product;
@@ -211,6 +212,24 @@ class PurchaseBookController extends Controller
                     return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
                 }
             }
+
+            // Add company stock entry
+            $stock = CompanyProductStock::where(['product_id'=> $request->pro_id])->latest()->first();
+            $old_total_weight=$stock?$stock->total_weight:0;
+            $old_remaining_weight=$stock?$stock->remaining_weight:0;
+            CompanyProductStock::create([
+                'product_id' => $request->pro_id,
+                'total_weight' => $old_total_weight+$final_weight,
+                'stock_in' => $final_weight,
+                'remaining_weight' =>  $old_remaining_weight+$final_weight,
+                'linkable_id' => $purchaseBook->id,
+                'linkable_type' => 'App\Models\PurchaseBook',
+                'entry_type' => 'purchase',
+                'price' => $price,
+                'price_mann' => $request->price_mann,
+                'total_amount' => $total_amount,
+            ]);
+
 
             // Commit the transaction
             DB::commit();

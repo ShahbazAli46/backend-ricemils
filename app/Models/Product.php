@@ -25,4 +25,9 @@ class Product extends Model
     {
         return $this->hasMany(PurchaseBook::class, 'pro_id');
     }
+
+    public function companyProductStocks()
+    {
+        return $this->hasMany(CompanyProductStock::class, 'product_id', 'id');
+    }
 }

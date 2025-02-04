@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompanyProductStock;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Packing;
@@ -62,13 +63,26 @@ class SaleBookController extends Controller
             // Validate buyer existence
             $buyer = Customer::where(['id' => $request->buyer_id, 'customer_type' => 'party'])->first();
             if (!$buyer) {
+                DB::rollBack();
                 return response()->json(['status' => 'error','message' => 'Party Does Not Exist.',], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
         
             // Validate product existence
             $product = Product::where(['id' => $request->pro_id])->firstOrFail();
             if (!$product) {
+                DB::rollBack();
                 return response()->json(['status' => 'error','message' => 'Product Type Is Not Valid.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $net_weight=($request->weight-($request->khoot+$request->bardaana_deduction));
+            $price = ($request->price_mann * $net_weight) / 40;
+
+            //check company stock
+            $stock = CompanyProductStock::where(['product_id'=> $request->pro_id])->latest()->first();
+            $old_remaining_weight=$stock?$stock->remaining_weight:0;
+            if($old_remaining_weight<$net_weight){
+                DB::rollBack();
+                return response()->json(['status' => 'error','message' => 'Out of Stock, Porduct '.$product->product_name], 422); // Use 422 Unprocessable Entity
             }
         
             // Create or update SaleBook
@@ -90,11 +104,6 @@ class SaleBookController extends Controller
                 return response()->json(['status' => 'error','message' => 'Failed to Add Sale Order.'], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
 
-
-            $net_weight=($request->weight-($request->khoot+$request->bardaana_deduction));
-            $price = ($request->price_mann * $net_weight) / 40;
-
-            
             $total_salai_amt=($request->salai_amt_per_bag*$request->bardaana_quantity);
 
             // Create or update SaleBookDetail
@@ -237,6 +246,16 @@ class SaleBookController extends Controller
                 if($saleBook->details()->count()<=0){
                     return response()->json(['status' => 'error','message' => 'Sale Book Cart is Empty.',], Response::HTTP_UNPROCESSABLE_ENTITY);
                 }
+                //check company stock weight
+                $sale_book_details=$saleBook->details()->get();
+                foreach($sale_book_details as $detail){
+                    $stock = CompanyProductStock::where(['product_id'=> $detail->pro_id])->latest()->first();
+                    $old_remaining_weight=$stock?$stock->remaining_weight:0;
+                    if($old_remaining_weight<$detail->net_weight){
+                        DB::rollBack();
+                        return response()->json(['status' => 'error','message' => 'Out of Stock #'.$detail->pro_id], 422); // Use 422 Unprocessable Entity
+                    }
+                }
 
                 $saleBook->order_status='completed';
                 $saleBook->description=$request->description;
@@ -262,6 +281,25 @@ class SaleBookController extends Controller
                 if(!$res){
                     DB::rollBack();
                     return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.',], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                }
+
+                // Add company stock entry
+                foreach($sale_book_details as $detail){
+                    $stock = CompanyProductStock::where(['product_id'=> $detail->pro_id])->latest()->first();
+                    $old_total_weight=$stock?$stock->total_weight:0;
+                    $old_remaining_weight=$stock?$stock->remaining_weight:0;
+                    CompanyProductStock::create([
+                        'product_id' => $detail->pro_id,
+                        'total_weight' => $old_total_weight,
+                        'stock_out' => $detail->net_weight,
+                        'remaining_weight' =>  $old_remaining_weight-$detail->net_weight,
+                        'linkable_id' => $detail->id,
+                        'linkable_type' => 'App\Models\SaleBookDetail',
+                        'entry_type' => 'sale',
+                        'price' => $detail->price,
+                        'price_mann' => $detail->price_mann,
+                        'total_amount' => $detail->total_amount,
+                    ]);
                 }
 
                 DB::commit();
