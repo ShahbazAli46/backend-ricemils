@@ -77,13 +77,13 @@ class SaleBookController extends Controller
             $net_weight=($request->weight-($request->khoot+$request->bardaana_deduction));
             $price = ($request->price_mann * $net_weight) / 40;
 
-            //check company stock
+            /*//check company stock
             $stock = CompanyProductStock::where(['product_id'=> $request->pro_id])->latest()->first();
             $old_remaining_weight=$stock?$stock->remaining_weight:0;
             if($old_remaining_weight<$net_weight){
                 DB::rollBack();
                 return response()->json(['status' => 'error','message' => 'Out of Stock, Porduct '.$product->product_name], 422); // Use 422 Unprocessable Entity
-            }
+            }*/
         
             // Create or update SaleBook
             $saleBook = SaleBook::updateOrCreate(
@@ -246,7 +246,7 @@ class SaleBookController extends Controller
                 if($saleBook->details()->count()<=0){
                     return response()->json(['status' => 'error','message' => 'Sale Book Cart is Empty.',], Response::HTTP_UNPROCESSABLE_ENTITY);
                 }
-                //check company stock weight
+                /* //check company stock weight
                 $sale_book_details=$saleBook->details()->get();
                 foreach($sale_book_details as $detail){
                     $stock = CompanyProductStock::where(['product_id'=> $detail->pro_id])->latest()->first();
@@ -255,7 +255,7 @@ class SaleBookController extends Controller
                         DB::rollBack();
                         return response()->json(['status' => 'error','message' => 'Out of Stock #'.$detail->pro_id], 422); // Use 422 Unprocessable Entity
                     }
-                }
+                }*/
 
                 $saleBook->order_status='completed';
                 $saleBook->description=$request->description;
@@ -284,6 +284,7 @@ class SaleBookController extends Controller
                 }
 
                 // Add company stock entry
+                $sale_book_details=$saleBook->details()->get();
                 foreach($sale_book_details as $detail){
                     $stock = CompanyProductStock::where(['product_id'=> $detail->pro_id])->latest()->first();
                     $old_total_weight=$stock?$stock->total_weight:0;
