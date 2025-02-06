@@ -121,7 +121,7 @@ class PartyLedgerController extends Controller
                     $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
                     $customer->ledgers= $customer->load(['ledgers' => function($query) use ($startDate, $endDate) {
                         $query->where(function ($query) {
-                            $query->where('entry_type', 'cr');
+                            $query->where('entry_type', 'cr')->whereNull('book_id');
                         })->whereBetween('created_at', [$startDate, $endDate])->with('bank:id,bank_name'); // Include bank details
                     }]);
                     // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
@@ -129,7 +129,7 @@ class PartyLedgerController extends Controller
                 }else{
                     $customer->ledgers= $customer->load(['ledgers' => function($query) {
                         $query->where(function ($query) {
-                            $query->where('entry_type', 'cr');
+                            $query->where('entry_type', 'cr')->whereNull('book_id');
                         })->with('bank:id,bank_name'); // Include bank details
                     }]);
                     // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->get();
@@ -145,13 +145,13 @@ class PartyLedgerController extends Controller
     
                 $customer_ledger = CustomerLedger::with(['customer:id,person_name,customer_type','bank:id,bank_name'])
                 ->where(function ($query) {
-                    $query->where('entry_type', 'cr');
+                    $query->where('entry_type', 'cr')->whereNull('book_id');
                 })->whereIn('customer_type',['party','investor'])->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer_ledger]);
             }else{
                 $customer_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])
                 ->where(function ($query) {
-                    $query->where('entry_type', 'cr');
+                    $query->where('entry_type', 'cr')->whereNull('book_id');
                 })->whereIn('customer_type',['party','investor'])->get();
                 return response()->json(['data' => $customer_ledger]);
             }
