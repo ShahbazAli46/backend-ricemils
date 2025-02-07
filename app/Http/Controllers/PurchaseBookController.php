@@ -62,32 +62,32 @@ class PurchaseBookController extends Controller
             'freight' => 'required|numeric|min:0',
             'price_mann' => 'required|numeric|min:1',
             'date' => 'nullable|date',
-            'payment_type' => 'required|in:cash,cheque,both,online',
+            // 'payment_type' => 'required|in:cash,cheque,both,online',
             'description'=> 'nullable|string',
         ];   
         
-        if ($request->input('payment_type') == 'cheque') {
-            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
-            $rules['cheque_no']= 'required|string|max:100';
-            $rules['cheque_date']= 'required|date';
-            $rules['bank_tax']= 'required|numeric|min:0';
-            $rules['cheque_amount']= ['required','numeric','min:1', new CheckBankBalance($request->input('bank_id'))];
-        }else if($request->input('payment_type') == 'cash'){
-            $rules['cash_amount']= ['required','numeric','min:0',new CheckCashBalance()];
-        }else if($request->input('payment_type') == 'online'){
-            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
-            $rules['cash_amount']= ['required','numeric','min:1', new CheckBankBalance($request->input('bank_id'))];
-            $rules['transection_id']= 'required|string|max:100';
-            $rules['bank_tax']= 'required|numeric|min:0';
-        }else{
-            $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
-            $rules['cash_amount']= ['required','numeric','min:1',new CheckCashBalance()];
-            $rules['cheque_amount']= ['required','numeric','min:1', new CheckBankBalance($request->input('bank_id'))];
+        // if ($request->input('payment_type') == 'cheque') {
+        //     $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
+        //     $rules['cheque_no']= 'required|string|max:100';
+        //     $rules['cheque_date']= 'required|date';
+        //     $rules['bank_tax']= 'required|numeric|min:0';
+        //     $rules['cheque_amount']= ['required','numeric','min:1', new CheckBankBalance($request->input('bank_id'))];
+        // }else if($request->input('payment_type') == 'cash'){
+        //     $rules['cash_amount']= ['required','numeric','min:0',new CheckCashBalance()];
+        // }else if($request->input('payment_type') == 'online'){
+        //     $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
+        //     $rules['cash_amount']= ['required','numeric','min:1', new CheckBankBalance($request->input('bank_id'))];
+        //     $rules['transection_id']= 'required|string|max:100';
+        //     $rules['bank_tax']= 'required|numeric|min:0';
+        // }else{
+        //     $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
+        //     $rules['cash_amount']= ['required','numeric','min:1',new CheckCashBalance()];
+        //     $rules['cheque_amount']= ['required','numeric','min:1', new CheckBankBalance($request->input('bank_id'))];
 
-            $rules['cheque_no']= 'required|string|max:100';
-            $rules['cheque_date']= 'required|date';
-            $rules['bank_tax']= 'required|numeric|min:0';
-        }
+        //     $rules['cheque_no']= 'required|string|max:100';
+        //     $rules['cheque_date']= 'required|date';
+        //     $rules['bank_tax']= 'required|numeric|min:0';
+        // }
 
         $validator = Validator::make($request->all(), $rules);
         
@@ -96,7 +96,7 @@ class PurchaseBookController extends Controller
         }
 
         try {
-            $payment_type=$request->input('payment_type');
+            // $payment_type=$request->input('payment_type');
             $supplier=Customer::where(['id'=>$request->sup_id,'customer_type'=>'party'])->first();
             if(!$supplier){
                 return response()->json(['status' => 'error','message' => 'Party Does Not Exist.'], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
@@ -116,9 +116,9 @@ class PurchaseBookController extends Controller
             $weight_per_bag=$final_weight/$request->bardaana_quantity;
             
             $total_amount=$price;
-            $add_amount=0;
-            $cash_amount= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
-            $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
+            // $add_amount=0;
+            // $cash_amount= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
+            // $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
 
             $lastLedger = $supplier->ledgers()->orderBy('id', 'desc')->first();
             $previousBalance=0.00;
@@ -128,11 +128,11 @@ class PurchaseBookController extends Controller
                 $previousBalance=$supplier->opening_balance;
             }
 
-            $add_amount+= ($cash_amount+$cheque_amount);
+            // $add_amount+= ($cash_amount+$cheque_amount);
 
             $totalWithPreBlnc=$previousBalance-$total_amount;
-            $rem_amount=$total_amount-$add_amount;
-            $rem_blnc_amount=$totalWithPreBlnc+$add_amount;
+            $rem_amount=$total_amount;
+            $rem_blnc_amount=$totalWithPreBlnc;
 
             $purchaseBook = PurchaseBook::create([
                 'sup_id' => $request->sup_id,
@@ -150,16 +150,16 @@ class PurchaseBookController extends Controller
                 'freight' => $request->freight,
                 'price' => $price,
                 'price_mann' => $request->price_mann,
-                'bank_tax' => $request->bank_tax,
+                // 'bank_tax' => $request->bank_tax,
                 'date' => $request->input('date', now()),
-                'payment_type' => $request->payment_type,
+                'payment_type' => 'none',
                 'bank_id' => $request->bank_id,
-                'cash_amount' => $cash_amount,
-                'cheque_amount' => $cheque_amount,
-                'cheque_no' => $request->cheque_no,
-                'cheque_date' => $request->cheque_date,
-                'transection_id' => $payment_type=='online'?$request->transection_id:null,
-                'net_amount' => $add_amount,
+                // 'cash_amount' => $cash_amount,
+                // 'cheque_amount' => $cheque_amount,
+                // 'cheque_no' => $request->cheque_no,
+                // 'cheque_date' => $request->cheque_date,
+                // 'transection_id' => $payment_type=='online'?$request->transection_id:null,
+                // 'net_amount' => $add_amount,
                 'total_amount' => $total_amount,
                 'rem_amount' => $rem_amount,
                 'description' => $request->description,
@@ -170,48 +170,48 @@ class PurchaseBookController extends Controller
                 return response()->json(['status' => 'error','message' => 'Failed to Add Purchase Order.',], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
-            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>$total_amount,'cr_amount'=>$add_amount,
-            'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>$request->payment_type,'cheque_amount'=>0.00,
-            'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'party','book_id'=>$purchaseBook->id,'entry_type'=>'dr&cr','balance'=>$rem_blnc_amount];
+            $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>$total_amount,'cr_amount'=>0.00,
+            'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>null,'cheque_amount'=>0.00,
+            'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'party','book_id'=>$purchaseBook->id,'entry_type'=>'dr','balance'=>$rem_blnc_amount];
             
-            if ($request->input('payment_type') == 'cheque') {
-                $transactionData['bank_id'] = $request->bank_id;
-                $transactionData['cheque_no']= $request->cheque_no;
-                $transactionData['cheque_date']= $request->cheque_date;
-                $transactionData['cheque_amount']= $cheque_amount;
-                $transactionData['bank_tax']= $request->bank_tax;
-            }else if($request->input('payment_type') == 'cash'){
-                $comp_debit_amt+=$cash_amount;
-                $transactionData['cash_amount']= $cash_amount;
-            }else if($request->input('payment_type') == 'online'){
-                $transactionData['cash_amount']= $cash_amount;;
-                $transactionData['transection_id']= $request->transection_id;
-                $transactionData['bank_id'] = $request->bank_id;
-                $transactionData['bank_tax']= $request->bank_tax;
-            }else{
-                $comp_debit_amt+=$cash_amount;
-                $transactionData['bank_id'] = $request->bank_id;
-                $transactionData['cheque_no']= $request->cheque_no;
-                $transactionData['cheque_date']= $request->cheque_date;
-                $transactionData['cheque_amount']= $cheque_amount;
-                $transactionData['cash_amount']= $cash_amount;
-                $transactionData['bank_tax']= $request->bank_tax;
-            }
+            // if ($request->input('payment_type') == 'cheque') {
+            //     $transactionData['bank_id'] = $request->bank_id;
+            //     $transactionData['cheque_no']= $request->cheque_no;
+            //     $transactionData['cheque_date']= $request->cheque_date;
+            //     $transactionData['cheque_amount']= $cheque_amount;
+            //     $transactionData['bank_tax']= $request->bank_tax;
+            // }else if($request->input('payment_type') == 'cash'){
+            //     $comp_debit_amt+=$cash_amount;
+            //     $transactionData['cash_amount']= $cash_amount;
+            // }else if($request->input('payment_type') == 'online'){
+            //     $transactionData['cash_amount']= $cash_amount;;
+            //     $transactionData['transection_id']= $request->transection_id;
+            //     $transactionData['bank_id'] = $request->bank_id;
+            //     $transactionData['bank_tax']= $request->bank_tax;
+            // }else{
+            //     $comp_debit_amt+=$cash_amount;
+            //     $transactionData['bank_id'] = $request->bank_id;
+            //     $transactionData['cheque_no']= $request->cheque_no;
+            //     $transactionData['cheque_date']= $request->cheque_date;
+            //     $transactionData['cheque_amount']= $cheque_amount;
+            //     $transactionData['cash_amount']= $cash_amount;
+            //     $transactionData['bank_tax']= $request->bank_tax;
+            // }
             $res=$purchaseBook->addTransaction($transactionData);
             if(!$res){
                 DB::rollBack();
                 return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
-            if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
-                //company ledger
-                $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
-                $res=$purchaseBook->addCompanyTransaction($transactionDataComp);
-                if(!$res){
-                    DB::rollBack();
-                    return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
-                }
-            }
+            // if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
+            //     //company ledger
+            //     $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
+            //     $res=$purchaseBook->addCompanyTransaction($transactionDataComp);
+            //     if(!$res){
+            //         DB::rollBack();
+            //         return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            //     }
+            // }
 
             // Add company stock entry
             $stock = CompanyProductStock::where(['product_id'=> $request->pro_id])->latest()->first();

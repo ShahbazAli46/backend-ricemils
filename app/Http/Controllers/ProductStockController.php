@@ -53,22 +53,16 @@ class ProductStockController extends Controller
         ]);
         
         if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first(),
-            ],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
+            return response()->json(['status' => 'error','message' => $validator->errors()->first(),],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
         }
         // $productStocks = [];
         try {
             $productIds = $request->product_id;
             // Check for duplicate product IDs
             if (count($productIds) !== count(array_unique($productIds))) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Duplicate Products are Not Allowed.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
+                return response()->json(['status' => 'error','message' => 'Duplicate Products are Not Allowed.',], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
             }
-
+            
             // Start a transaction
             DB::beginTransaction();
 

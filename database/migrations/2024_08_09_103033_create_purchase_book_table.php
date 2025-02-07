@@ -37,7 +37,7 @@ return new class extends Migration
             $table->decimal('bank_tax', 15, 2)->default(0.00);
             $table->decimal('total_amount', 15, 2)->default(0.00);
             $table->date('date')->default(DB::raw('CURRENT_DATE'));
-            $table->enum('payment_type',['cash','cheque','both','online']);
+            $table->enum('payment_type',['cash','cheque','both','online','none']);
             $table->decimal('cash_amount', 15, 2)->default(0.00);
             $table->decimal('cheque_amount', 15, 2)->default(0.00);
             $table->string('cheque_no',100)->nullable();
