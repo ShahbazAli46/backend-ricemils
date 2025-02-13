@@ -11,7 +11,7 @@ class Bank extends Model
     use HasFactory,SoftDeletes;
     public $table="banks";
     
-    protected $fillable = ['bank_name'];
+    protected $fillable = ['bank_name','balance'];
 
     public function expense()
     {

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController};
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController, SelfPaymentController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -83,6 +83,9 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::post('/advance_cheque/{id}', [AdvanceChequeController::class, 'update']);
     Route::get('/advance_cheque/is_deferred/{id}/{value}', [AdvanceChequeController::class, 'changeStatus'])->where('value', '0|1');
     
+    Route::post('/self_payment/bank_to_cash', [SelfPaymentController::class, 'bankToCashTransfer']);
+
+
     Route::get('/dr/api', [DashboardController::class, 'drApi']);
     Route::get('/cr/api', [DashboardController::class, 'crApi']);
 

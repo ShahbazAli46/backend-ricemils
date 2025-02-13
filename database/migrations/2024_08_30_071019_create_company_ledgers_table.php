@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->enum('entry_type',['dr','cr']);
             $table->unsignedBigInteger('link_id')->nullable();
-            $table->enum('link_name',['purchase','expense','party_ledger','opening_balance','investor_ledger'])->nullable();;
+            $table->enum('link_name',['purchase','expense','party_ledger','opening_balance','investor_ledger','bank_to_cash_self'])->nullable();;
             $table->decimal('balance', 15, 2)->default(0.00);
             $table->timestamps();
         });
