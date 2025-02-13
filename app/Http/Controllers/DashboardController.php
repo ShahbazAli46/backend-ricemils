@@ -25,7 +25,7 @@ class DashboardController extends Controller
                 $openingBalance = CompanyLedger::whereDate('created_at', $date)->where('link_name','opening_balance')->sum('cr_amount');
             }
 
-            $inflowSumCom = CompanyLedger::whereDate('created_at', $date)->whereIn('link_name',['party_ledger','investor_ledger'])->sum('cr_amount');
+            $inflowSumCom = CompanyLedger::whereDate('created_at', $date)->whereIn('link_name',['party_ledger','investor_ledger','bank_to_cash_self'])->sum('cr_amount');
             $outflowSumCom = CompanyLedger::whereDate('created_at', $date)->sum('dr_amount');
 
             //get cheque and online outflow
@@ -57,7 +57,7 @@ class DashboardController extends Controller
             return response()->json(['date'=>$date,'data'=>$data]);
         }else{
             $openingBalance = CompanyLedger::where('link_name','opening_balance')->sum('cr_amount');
-            $inflowCashSum = CompanyLedger::whereIn('link_name',['party_ledger','investor_ledger'])->sum('cr_amount');
+            $inflowCashSum = CompanyLedger::whereIn('link_name',['party_ledger','investor_ledger','bank_to_cash_self'])->sum('cr_amount');
             $outflowSumCom = CompanyLedger::sum('dr_amount');
 
             //get cheque and online outflow

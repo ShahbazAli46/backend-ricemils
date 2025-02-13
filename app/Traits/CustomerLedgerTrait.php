@@ -78,7 +78,6 @@ trait CustomerLedgerTrait
                 $add_amount=$tranData['cash_amount'];
             }
 
-
             if($tranData['entry_type']=='cr'){
                 $bank->balance=$bank->balance-$add_amount;
             }else{
@@ -87,8 +86,11 @@ trait CustomerLedgerTrait
                 }
                 $bank->balance=$bank->balance+$add_amount;
             }
-
-
+            $bank->save();
+        }else if($tranData['customer_type']=='self'){
+            $bank=Bank::find($tranData['bank_id']);
+            $add_amount=$tranData['cash_amount'];
+            $bank->balance=$bank->balance-$add_amount;
             $bank->save();
         }
     }

@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('customers', function (Blueprint $table) {
-            $table->enum('customer_type',['investor','party'])->after('opening_balance');
+            $table->enum('customer_type',['investor','party','self'])->after('opening_balance');
         });
     }
 
