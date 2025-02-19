@@ -34,7 +34,7 @@ class PartyController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'person_name' => 'required|string|max:100',
+            'person_name' => 'required|string|max:100|unique:customers,person_name',
             'refference_id' => ['nullable','exists:customers,id',new ExistsNotSoftDeleted('customers')],
             'contact' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:100',

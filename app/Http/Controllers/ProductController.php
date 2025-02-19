@@ -38,12 +38,12 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_name' => 'required|string|max:100',
+            'product_name' => 'required|string|max:100|unique:products,product_name',
             'product_description' => 'nullable|string',
-            'opening_weight' => 'nullable|numeric|min:0',
-            'opening_price' => 'nullable|numeric|min:0',
-            'opening_price_mann' => 'nullable|numeric|min:0',
-            'opening_total_amount' => 'nullable|numeric|min:0',
+            'opening_weight' => 'nullable|numeric',
+            'opening_price' => 'nullable|numeric',
+            'opening_price_mann' => 'nullable|numeric',
+            'opening_total_amount' => 'nullable|numeric',
         ]);
         
         if ($validator->fails()) {

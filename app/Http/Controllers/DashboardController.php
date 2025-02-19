@@ -54,6 +54,7 @@ class DashboardController extends Controller
             $data['bank_inflow'] = ($cheque_amount+$cash_amount)+($cheque_amount_investor+$cash_amount_investor);
             $data['cash_outflow'] = $outflowSumCom;
             $data['bank_outflow'] = $cheque_amount_out+$cash_amount_out+$cheque_amount_expense_out+$cash_amount_expense_out+($cheque_amount_out_investor+$cash_amount_out_investor);
+            
             return response()->json(['date'=>$date,'data'=>$data]);
         }else{
             $openingBalance = CompanyLedger::where('link_name','opening_balance')->sum('cr_amount');
@@ -82,6 +83,7 @@ class DashboardController extends Controller
             $data['bank_inflow'] = ($cheque_amount+$cash_amount)+($cheque_amount_investor+$cash_amount_investor);
             $data['cash_outflow'] = $outflowSumCom;
             $data['bank_outflow'] = $cheque_amount_out+$cash_amount_out+$cheque_amount_expense_out+$cash_amount_expense_out+($cheque_amount_out_investor+$cash_amount_out_investor);
+           
             return response()->json(['data'=>$data]);
         }
     }
@@ -109,7 +111,7 @@ class DashboardController extends Controller
         $banks = Bank::all();
         $data['banks'] = $banks;
 
-        $cash_amt = CompanyLedger::where('entry_type', 'cr')->sum('cr_amount');
+        $cash_amt = CompanyLedger::select('balance')->latest()->first()->balance ?? 0.00;
         $data['cash'] = $cash_amt;
 
         return response()->json(['data' => $data]);
