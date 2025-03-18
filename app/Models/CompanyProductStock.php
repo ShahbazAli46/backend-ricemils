@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\CompanyLedgerTrait;
+use App\Traits\CustomerLedgerTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CompanyProductStock extends Model
 {
-    use HasFactory;
+    use HasFactory,CompanyLedgerTrait,CustomerLedgerTrait;
     public $table="company_product_stocks";
 
     protected $fillable = [

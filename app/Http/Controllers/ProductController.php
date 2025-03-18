@@ -20,12 +20,22 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $products=Product::with(['companyProductStocks' => function ($query) {
-            $query->select('id', 'product_id', 'total_weight', 'remaining_weight','balance')
+        $products = Product::with(['companyProductStocks' => function ($query) {
+            $query->select('id', 'product_id', 'total_weight', 'remaining_weight', 'entry_type')
                 ->whereIn('id', function ($subQuery) {
-                    $subQuery->select(DB::raw('MAX(id)'))->from('company_product_stocks')->groupBy('product_id');
-                });
-            }])->get();
+                    $subQuery->select(DB::raw('MAX(id)'))
+                        ->from('company_product_stocks')
+                        ->whereIn('entry_type', ['opening', 'sale', 'purchase'])
+                        ->groupBy('product_id');
+                })
+                ->addSelect(['balance' => function ($query) {
+                    $query->select('balance')
+                        ->from('company_product_stocks as cps')
+                        ->whereColumn('cps.product_id', 'company_product_stocks.product_id')
+                        ->orderBy('id', 'desc')
+                        ->limit(1);
+                }]);
+        }])->get();
         return response()->json(['data' => $products]);
     }
 
@@ -91,10 +101,20 @@ class ProductController extends Controller
     {
         try {
             $product = Product::with(['companyProductStocks' => function ($query) {
-            $query->select('id', 'product_id', 'total_weight', 'remaining_weight','balance')
-                ->whereIn('id', function ($subQuery) {
-                    $subQuery->select(DB::raw('MAX(id)'))->from('company_product_stocks')->groupBy('product_id');
-                });
+                $query->select('id', 'product_id', 'total_weight', 'remaining_weight')
+                    ->whereIn('id', function ($subQuery) {
+                        $subQuery->select(DB::raw('MAX(id)'))
+                            ->from('company_product_stocks')
+                            ->whereIn('entry_type', ['opening', 'sale', 'purchase'])
+                            ->groupBy('product_id');
+                    })
+                    ->addSelect(['balance' => function ($query) {
+                        $query->select('balance')
+                            ->from('company_product_stocks as cps')
+                            ->whereColumn('cps.product_id', 'company_product_stocks.product_id')
+                            ->orderBy('id', 'desc')
+                            ->limit(1);
+                    }]);
             }])->findOrFail($id);
 
             $com_pro_stock_query=CompanyProductStock::with('party')->where('product_id',$id);

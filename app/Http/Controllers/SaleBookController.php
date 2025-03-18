@@ -286,10 +286,13 @@ class SaleBookController extends Controller
                 // Add company stock entry
                 $sale_book_details=$saleBook->details()->get();
                 foreach($sale_book_details as $detail){
-                    $stock = CompanyProductStock::where(['product_id'=> $detail->pro_id])->latest()->first();
+                    $stock_balance = CompanyProductStock::where(['product_id'=> $detail->pro_id])->latest()->first();
+                    $old_balance=$stock_balance?$stock_balance->balance:0;
+
+                    $stock = CompanyProductStock::where(['product_id'=> $detail->pro_id])->whereIn('entry_type',['opening','purchase','sale'])->latest()->first();
                     $old_total_weight=$stock?$stock->total_weight:0;
                     $old_remaining_weight=$stock?$stock->remaining_weight:0;
-                    $old_balance=$stock?$stock->balance:0;
+
                     CompanyProductStock::create([
                         'product_id' => $detail->pro_id,
                         'total_weight' => $old_total_weight,

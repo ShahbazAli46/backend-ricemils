@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController, SelfPaymentController};
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, CompanyProductStockController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController, SelfPaymentController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,6 +39,9 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::apiResource('product_stock', ProductStockController::class);
     Route::post('/product_stock/{id}', [ProductStockController::class, 'update']);
     
+    Route::apiResource('company_product_stock', CompanyProductStockController::class);
+
+
     Route::apiResource('bank', BankController::class);
     Route::post('/bank/{id}', [BankController::class, 'update']);
     Route::get('/bank/transection/detail/{id}', [BankController::class, 'bankTransectionDetail']);
