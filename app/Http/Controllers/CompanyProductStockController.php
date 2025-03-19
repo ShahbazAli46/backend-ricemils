@@ -112,7 +112,6 @@ class CompanyProductStockController extends Controller
                 }
             }
 
-
             DB::commit();
             return response()->json([
                 'status' => 'success',
