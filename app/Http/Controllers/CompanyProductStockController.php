@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompanyProductStock;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Product;
 use App\Rules\CheckBankBalance;
 use App\Rules\ExistsNotSoftDeleted;
@@ -91,6 +93,10 @@ class CompanyProductStockController extends Controller
             $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             $data_arr['cheque_amount']= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
+            
+            $exp_category = ExpenseCategory::firstOrCreate(['expense_category' => 'Product Expense']);
+            $data_arr['expense_category_id'] = $exp_category->id;
+            $expense = Expense::create($data_arr);
             
             $stock_balance = CompanyProductStock::where(['product_id'=> $request->product_id])->latest()->first();
             $old_balance=$stock_balance?$stock_balance->balance:0;
