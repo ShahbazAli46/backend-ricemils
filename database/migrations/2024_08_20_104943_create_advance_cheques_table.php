@@ -23,7 +23,7 @@ return new class extends Migration
             $table->decimal('cheque_amount', 15, 2)->default(0.00);
             $table->string('cheque_no',100)->nullable();
             $table->date('cheque_date')->nullable();
-            $table->enum('customer_type',['supplier','buyer']);
+            $table->enum('customer_type',['party','investor']);
             $table->boolean('is_deferred')->default(0);
             $table->timestamps();
         });

@@ -53,7 +53,7 @@ class SelfPaymentController extends Controller
 
             $transactionData=['customer_id'=>$party->id,'bank_id'=>$request->bank_id,'description'=>$request->description,'dr_amount'=>0.00,'cr_amount'=>$request->amount,
             'adv_amount'=>0.00,'cash_amount'=>$request->amount,'payment_type'=>'online','cheque_amount'=>0.00,'cheque_no'=>null,'cheque_date'=>null,
-            'transection_id'=>null, 'customer_type'=>'self','book_id'=>null,'balance'=>$new_blnc_amount];
+            'transection_id'=>$request->transection_id, 'customer_type'=>'self','book_id'=>null,'balance'=>$new_blnc_amount,'entry_type'=>'cr'];
             
             $res=$party->addTransaction($transactionData);
             if(!$res){

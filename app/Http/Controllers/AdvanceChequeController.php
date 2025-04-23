@@ -216,6 +216,11 @@ class AdvanceChequeController extends Controller
                     return response()->json(['status' => 'error','message' => 'Party Does Not Exist.',], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
                 }
 
+                $checkBankBalance=$this->checkBankBalance($advance_cheque->bank_id,$advance_cheque->cheque_amount);
+                if (!$checkBankBalance) {
+                    return response()->json(['status' => 'error','message' => 'Bank does not have sufficient balance.',], Response::HTTP_UNPROCESSABLE_ENTITY); // 422
+                }
+                
                 $lastLedger = $party->ledgers()->orderBy('id', 'desc')->first();
                 $previousBalance=0.00;
                 if($lastLedger){

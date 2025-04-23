@@ -30,29 +30,21 @@ class BankController extends Controller
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
-                $bank = Bank::with(['customerLedger' => function ($query) use ($startDate, $endDate) {
+                $bank = Bank::with(['bankLedger' => function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('created_at', [$startDate, $endDate])
-                          ->with('customer'); // Load 'customer' within 'customerLedger' after filtering by date
+                          ->with('linkable'); // Load 'customer' within 'customerLedger' after filtering by date
                 }])->findOrFail($id);
                 
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $bank]);
             }else{
-                $bank = Bank::with('customerLedger.customer')->findOrFail($id);
+                $bank = Bank::with('bankLedger.linkable')->findOrFail($id);
                 return response()->json(['data' => $bank]);
             }
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Bank Not Found.'], Response::HTTP_NOT_FOUND);
         }
-
-        $bank=Bank::with('customerLedger.customer')->find($id);
-        if($bank){
-            return response()->json(['data' => $bank]);
-        }else{
-            return response()->json(['status'=>'error', 'message' => 'Bank Not Found.'], Response::HTTP_NOT_FOUND);
-        }
     }
 
-    
     /**
      * Store a newly created resource in storage.
      *
@@ -78,7 +70,20 @@ class BankController extends Controller
                 'bank_name' => $request->input('bank_name'),
                 'balance' => $request->input('balance'),
             ]);
-    
+
+            $bank->addBankTransection([
+                'bank_id'=> $bank->id,
+                'description'=> 'Opening Balance',
+                'cr_amount'=> $request->input('balance'),
+                'entry_type'=> 'cr',
+                'payment_type'=> 'online',
+                'online_amount'=> $request->input('balance'),
+                'linkable_id'=> $bank->id,
+                'linkable_type'=> Bank::class,
+                'link_name'=> 'opening_balance',
+                'balance'=> $bank->balance,
+            ]);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Bank Created Successfully.',

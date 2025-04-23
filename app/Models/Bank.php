@@ -33,4 +33,15 @@ class Bank extends Model
     {
         return $this->hasMany(CustomerLedger::class);
     }
+
+    public function bankLedger()
+    {
+        return $this->hasMany(BankLedger::class);
+    }
+
+    public function addBankTransection($tranData)
+    {
+        return BankLedger::create($tranData);
+    }
+
 }

@@ -23,7 +23,7 @@ return new class extends Migration
             $table->decimal('remaining_weight', 15, 2)->default(0.00);
             $table->unsignedBigInteger('linkable_id')->nullable();
             $table->string('linkable_type',100)->nullable();
-            $table->enum('entry_type',['sale','purchase','opening','expense'])->nullable();;
+            $table->enum('entry_type',['sale','purchase','opening','expense'])->nullable();
             $table->decimal('price', 15, 2)->default(0.00);
             $table->decimal('price_mann', 15, 2)->default(0.00);
             $table->decimal('total_amount', 15, 2)->default(0.00);

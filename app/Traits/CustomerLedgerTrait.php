@@ -5,6 +5,7 @@ namespace App\Traits;
 use App\Models\Bank;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
+use App\Models\ExpenseCategory;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
@@ -60,38 +61,97 @@ trait CustomerLedgerTrait
 
         if($tranData['customer_type']=='investor' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
             $bank=Bank::find($tranData['bank_id']);
-            $add_amount=$tranData['cheque_amount'];
+            $bankTran=['bank_id'=> $tranData['bank_id'],'description'=> $tranData['description']];
+
             if($tranData['payment_type']=='online'){
                 $add_amount=$tranData['cash_amount'];
+                $bankTran['payment_type'] = 'online';
+                $bankTran['online_amount'] = $add_amount;
+                $bankTran['transection_id'] = $tranData['transection_id'];
+            }else{
+                $add_amount=$tranData['cheque_amount'];
+                $bankTran['payment_type'] = 'cheque';
+                $bankTran['cheque_amount'] = $add_amount;
+                $bankTran['cheque_no'] = $tranData['cheque_no'];
+                $bankTran['cheque_date'] = $tranData['cheque_date'];
             }
+
+            $bankTran['linkable_id']=$tranData['customer_id'];
+            $bankTran['linkable_type']=Customer::class;
+            $bankTran['link_name']='investor_ledger';
+
             if($tranData['entry_type']=='cr'){
                 $bank->balance=$bank->balance-$add_amount;
+                $bankTran['dr_amount'] = $add_amount;
+                $bankTran['entry_type'] = 'dr';
             }else{
                 $bank->balance=$bank->balance+$add_amount;
+                $bankTran['cr_amount'] = $add_amount;
+                $bankTran['entry_type'] = 'cr';
             }
             $bank->save();
-
+            
+            $bankTran['balance']=$bank->balance;
+            $bank->addBankTransection($bankTran);
         }else if($tranData['customer_type']=='party' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
             $bank=Bank::find($tranData['bank_id']);
-            $add_amount=$tranData['cheque_amount'];
+          
+            // $table->enum('',['expense','party_ledger','opening_balance','investor_ledger','bank_to_cash_self','product_expense'])->nullable();
+            $bankTran=['bank_id'=> $tranData['bank_id'],'description'=> $tranData['description']];
+
             if($tranData['payment_type']=='online'){
                 $add_amount=$tranData['cash_amount'];
+                $bankTran['payment_type'] = 'online';
+                $bankTran['online_amount'] = $add_amount;
+                $bankTran['transection_id'] = $tranData['transection_id'];
+            }else{
+                $add_amount=$tranData['cheque_amount'];
+                $bankTran['payment_type'] = 'cheque';
+                $bankTran['cheque_amount'] = $add_amount;
+                $bankTran['cheque_no'] = $tranData['cheque_no'];
+                $bankTran['cheque_date'] = $tranData['cheque_date'];
             }
+
+            $bankTran['linkable_id']=isset($tranData['expense_category_id'])?$tranData['expense_category_id']: $tranData['customer_id'];
+            $bankTran['linkable_type']=isset($tranData['expense_category_id'])?ExpenseCategory::class : Customer::class;
+            $bankTran['link_name']=isset($tranData['expense_category_id'])?'expense':'party_ledger';
 
             if($tranData['entry_type']=='cr'){
                 $bank->balance=$bank->balance-$add_amount;
+                $bankTran['dr_amount'] = $add_amount;
+                $bankTran['entry_type'] = 'dr';
             }else{
                 if($tranData['entry_type']=='dr&cr'){
                     $add_amount = $add_amount * -1; 
                 }
                 $bank->balance=$bank->balance+$add_amount;
+                $bankTran['cr_amount'] = $add_amount;
+                $bankTran['entry_type'] = 'cr';
             }
             $bank->save();
+
+            $bankTran['balance']=$bank->balance;
+            $bank->addBankTransection($bankTran);
         }else if($tranData['customer_type']=='self'){
             $bank=Bank::find($tranData['bank_id']);
             $add_amount=$tranData['cash_amount'];
             $bank->balance=$bank->balance-$add_amount;
+
+            $bankTran=[
+                'bank_id'=> $tranData['bank_id'],
+                'description'=> $tranData['description'],
+                'payment_type'=> 'online',
+                'online_amount'=> $add_amount,
+                'dr_amount'=> $add_amount,
+                'transection_id'=> $tranData['transection_id'],
+                'linkable_id'=> $tranData['customer_id'],
+                'linkable_type'=> Customer::class,
+                'link_name'=> 'bank_to_cash_self',
+                'balance'=> $bank->balance,
+            ];
+
             $bank->save();
+            $bank->addBankTransection($bankTran);
         }
     }
 
