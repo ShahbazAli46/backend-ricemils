@@ -29,32 +29,32 @@ class CompanyProductStockController extends Controller
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
-            if($request->cash_amount>=1){
+            if($request->cheque_amount>=1){
                 $rules['cheque_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
             }else{
-                $rules['cheque_amount']= ['required','numeric','min:1'];
+                $rules['cheque_amount']= ['required','numeric','not_in:0'];
             }
         }else if($request->input('payment_type') == 'cash'){
-            $rules['cash_amount']= 'required|numeric|min:1';
+            $rules['cash_amount']= 'required|numeric|not_in:0';
         }else if($request->input('payment_type') == 'online'){
             $rules['transection_id']= 'required|string|max:100';
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             if($request->cash_amount>=1){
                 $rules['cash_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
             }else{
-                $rules['cash_amount']= ['required','numeric','min:1'];
+                $rules['cash_amount']= ['required','numeric','not_in:0'];
             }
         }else{
             $rules['bank_id'] = ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')];
             $rules['cheque_no']= 'required|string|max:100';
             $rules['cheque_date']= 'required|date';
-            if($request->cash_amount>=1){
+            if($request->cheque_amount>=1){
                 $rules['cheque_amount']= ['required','numeric', new CheckBankBalance($request->input('bank_id'))];
+                $is_bank_entry=true;
             }else{
-                $rules['cheque_amount']= ['required','numeric','min:1'];
+                $rules['cheque_amount']= ['required','numeric','not_in:0'];
             }
-            $rules['cash_amount']= 'required|numeric|min:1';
-            $is_bank_entry=true;
+            $rules['cash_amount']= 'required|numeric|not_in:0';
             $check_bank_arr['bank_id']=$request->input('bank_id');
             $check_bank_arr['given_balance']=$request->input('cheque_amount');
         }
@@ -77,6 +77,9 @@ class CompanyProductStockController extends Controller
             // Start a transaction
             DB::beginTransaction();
 
+            $stock_balance = CompanyProductStock::where(['product_id'=> $request->product_id])->latest()->first();
+            $old_balance=$stock_balance?$stock_balance->balance:0;
+            
             $data_arr=[
                 'product_id' => $request->input('product_id'),
                 'payment_type' => $request->input('payment_type'),
@@ -89,28 +92,42 @@ class CompanyProductStockController extends Controller
                 'linkable_id' => $request->input('product_id'),
                 'linkable_type' => Product::class,
             ];
-            
-            $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
-            $data_arr['cheque_amount']= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
+
+            $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') ) ? $request->cash_amount : 0;
+            $data_arr['cheque_amount']= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') ) ? $request->cheque_amount : 0;
             $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
             
+            $original_total_amt=$data_arr['total_amount'];
+            $data_arr['total_amount']=abs($data_arr['total_amount']);
+            $data_arr['cash_amount']=abs($data_arr['cash_amount']);
+            $data_arr['cheque_amount']=abs($data_arr['cheque_amount']);
+
             $exp_category = ExpenseCategory::firstOrCreate(['expense_category' => 'Product Expense']);
             $data_arr['expense_category_id'] = $exp_category->id;
-            $expense = Expense::create($data_arr);
-            
-            $stock_balance = CompanyProductStock::where(['product_id'=> $request->product_id])->latest()->first();
-            $old_balance=$stock_balance?$stock_balance->balance:0;
+            if($original_total_amt>0){
+                $expense = Expense::create($data_arr);
+                $data_arr['balance']=$old_balance+$data_arr['total_amount'];
+                $entry_type_com='cr';
+                $data_arr['expense_entry_type']='dr';
+            }else{
+                $data_arr['balance']=$old_balance-$data_arr['total_amount'];
+                $entry_type_com='dr';
+                $data_arr['expense_entry_type']='cr';
+            }
 
-            $data_arr['balance']=$old_balance+$data_arr['total_amount'];
             $companyProductStock = CompanyProductStock::create($data_arr);
-            
             $data_arr['customer_type']='party'; 
-            $data_arr['entry_type']='cr';
+            $data_arr['entry_type']=$entry_type_com;
+            
             $companyProductStock->reCalculateBankBalance($data_arr);
 
             if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
                 //company ledger
-                $transactionDataComp=['dr_amount'=>$data_arr['cash_amount'],'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$companyProductStock->id,'link_name'=>'product_expense'];
+                if($original_total_amt>0){
+                    $transactionDataComp=['dr_amount'=>$data_arr['cash_amount'],'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$companyProductStock->id,'link_name'=>'product_expense'];
+                }else{
+                    $transactionDataComp=['dr_amount'=>0.00,'cr_amount'=>$data_arr['cash_amount'],'description'=>$request->description,'entry_type'=>'cr','link_id'=>$companyProductStock->id,'link_name'=>'product_expense'];
+                }
                 $res=$companyProductStock->addCompanyTransaction($transactionDataComp);
                 if(!$res){
                     DB::rollBack();

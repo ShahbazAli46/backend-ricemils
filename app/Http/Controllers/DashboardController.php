@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bank;
+use App\Models\BankLedger;
 use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
@@ -25,64 +26,79 @@ class DashboardController extends Controller
                 $openingBalance = CompanyLedger::whereDate('created_at', $date)->where('link_name','opening_balance')->sum('cr_amount');
             }
 
-            $inflowSumCom = CompanyLedger::whereDate('created_at', $date)->whereIn('link_name',['party_ledger','investor_ledger','bank_to_cash_self'])->sum('cr_amount');
+            $inflowSumCom = CompanyLedger::whereDate('created_at', $date)
+            ->where(function($query) {
+                $query->whereIn('link_name', ['party_ledger', 'investor_ledger', 'bank_to_cash_self'])
+                      ->orWhere(function($query) {
+                          $query->where('link_name', 'product_expense')->where('entry_type', 'cr');
+                      });
+            })->sum('cr_amount');
             $outflowSumCom = CompanyLedger::whereDate('created_at', $date)->sum('dr_amount');
 
             //get cheque and online outflow
-            $cheque_amount_out = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount_out = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount_out = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount_out = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
             
-            $cheque_amount_out_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount_out_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount_out_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount_out_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
             
 
             //get cheque and online expense outflow
-            $cheque_amount_expense_out = Expense::whereDate('created_at', $date)->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount_expense_out = Expense::whereDate('created_at', $date)->where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount_expense_out = Expense::whereDate('created_at', $date)->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount_expense_out = Expense::whereDate('created_at', $date)->where('payment_type', 'online')->sum('cash_amount');
             
-            
+            $bank_inflow=BankLedger::whereDate('created_at', $date)->sum('cr_amount');
+            $bank_outflow=BankLedger::whereDate('created_at', $date)->sum('dr_amount');
+
             //get cheque and online inflow
-            $cheque_amount = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
            
-            $cheque_amount_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
             
 
             $data['opening_balance'] = $openingBalance;
             $data['cash_inflow'] = $inflowSumCom;
-            $data['bank_inflow'] = ($cheque_amount+$cash_amount)+($cheque_amount_investor+$cash_amount_investor);
+            $data['bank_inflow'] = $bank_inflow;//($cheque_amount+$cash_amount)+($cheque_amount_investor+$cash_amount_investor);
             $data['cash_outflow'] = $outflowSumCom;
-            $data['bank_outflow'] = $cheque_amount_out+$cash_amount_out+$cheque_amount_expense_out+$cash_amount_expense_out+($cheque_amount_out_investor+$cash_amount_out_investor);
+            $data['bank_outflow'] = $bank_outflow;//$cheque_amount_out+$cash_amount_out+$cheque_amount_expense_out+$cash_amount_expense_out+($cheque_amount_out_investor+$cash_amount_out_investor);
             
             return response()->json(['date'=>$date,'data'=>$data]);
         }else{
             $openingBalance = CompanyLedger::where('link_name','opening_balance')->sum('cr_amount');
-            $inflowCashSum = CompanyLedger::whereIn('link_name',['party_ledger','investor_ledger','bank_to_cash_self'])->sum('cr_amount');
+            $inflowCashSum = CompanyLedger::where(function($query) {
+                $query->whereIn('link_name', ['party_ledger', 'investor_ledger', 'bank_to_cash_self'])
+                      ->orWhere(function($query) {
+                          $query->where('link_name', 'product_expense')->where('entry_type', 'cr');
+                      });
+            })->sum('cr_amount');
             $outflowSumCom = CompanyLedger::sum('dr_amount');
 
             //get cheque and online outflow
-            $cheque_amount_out = CustomerLedger::where('customer_type','party')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount_out = CustomerLedger::where('customer_type','party')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
-            $cheque_amount_out_investor = CustomerLedger::where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount_out_investor = CustomerLedger::where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount_out = CustomerLedger::where('customer_type','party')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount_out = CustomerLedger::where('customer_type','party')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount_out_investor = CustomerLedger::where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount_out_investor = CustomerLedger::where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
             
             //get cheque and online expense outflow
-            $cheque_amount_expense_out = Expense::whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount_expense_out = Expense::where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount_expense_out = Expense::whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount_expense_out = Expense::where('payment_type', 'online')->sum('cash_amount');
 
             //get cheque and online inflow
-            $cheque_amount = CustomerLedger::where('customer_type','party')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount = CustomerLedger::where('customer_type','party')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
+            $bank_inflow=BankLedger::sum('cr_amount');
+            $bank_outflow=BankLedger::sum('dr_amount');
+            // $cheque_amount = CustomerLedger::where('customer_type','party')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount = CustomerLedger::where('customer_type','party')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
             
-            $cheque_amount_investor = CustomerLedger::where('customer_type','investor')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
-            $cash_amount_investor = CustomerLedger::where('customer_type','investor')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
+            // $cheque_amount_investor = CustomerLedger::where('customer_type','investor')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
+            // $cash_amount_investor = CustomerLedger::where('customer_type','investor')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
 
             $data['opening_balance'] = $openingBalance;
             $data['cash_inflow']  = $inflowCashSum;
-            $data['bank_inflow'] = ($cheque_amount+$cash_amount)+($cheque_amount_investor+$cash_amount_investor);
+            $data['bank_inflow'] = $bank_inflow;//($cheque_amount+$cash_amount)+($cheque_amount_investor+$cash_amount_investor);
             $data['cash_outflow'] = $outflowSumCom;
-            $data['bank_outflow'] = $cheque_amount_out+$cash_amount_out+$cheque_amount_expense_out+$cash_amount_expense_out+($cheque_amount_out_investor+$cash_amount_out_investor);
+            $data['bank_outflow'] = $bank_outflow;//$cheque_amount_out+$cash_amount_out+$cheque_amount_expense_out+$cash_amount_expense_out+($cheque_amount_out_investor+$cash_amount_out_investor);
            
             return response()->json(['data'=>$data]);
         }

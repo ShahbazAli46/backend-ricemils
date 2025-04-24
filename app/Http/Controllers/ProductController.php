@@ -117,7 +117,7 @@ class ProductController extends Controller
                     }]);
             }])->findOrFail($id);
 
-            $com_pro_stock_query=CompanyProductStock::with('party')->where('product_id',$id);
+            $com_pro_stock_query=CompanyProductStock::with(['party','linkable'])->where('product_id',$id);
             if ($request->has('start_date') && $request->has('end_date')) {
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay(); // Use endOfDay to include the entire day
