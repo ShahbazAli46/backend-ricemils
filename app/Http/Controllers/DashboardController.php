@@ -42,14 +42,10 @@ class DashboardController extends Controller
             // $cheque_amount_out_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
             // $cash_amount_out_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->whereIn('entry_type',['cr','dr&cr'])->where('payment_type', 'online')->sum('cash_amount');
             
-
             //get cheque and online expense outflow
             // $cheque_amount_expense_out = Expense::whereDate('created_at', $date)->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
             // $cash_amount_expense_out = Expense::whereDate('created_at', $date)->where('payment_type', 'online')->sum('cash_amount');
             
-            $bank_inflow=BankLedger::whereDate('created_at', $date)->sum('cr_amount');
-            $bank_outflow=BankLedger::whereDate('created_at', $date)->sum('dr_amount');
-
             //get cheque and online inflow
             // $cheque_amount = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
             // $cash_amount = CustomerLedger::whereDate('created_at', $date)->where('customer_type','party')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
@@ -57,6 +53,8 @@ class DashboardController extends Controller
             // $cheque_amount_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
             // $cash_amount_investor = CustomerLedger::whereDate('created_at', $date)->where('customer_type','investor')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
             
+            $bank_inflow=BankLedger::whereDate('created_at', $date)->sum('cr_amount');
+            $bank_outflow=BankLedger::whereDate('created_at', $date)->sum('dr_amount');
 
             $data['opening_balance'] = $openingBalance;
             $data['cash_inflow'] = $inflowSumCom;
@@ -86,13 +84,14 @@ class DashboardController extends Controller
             // $cash_amount_expense_out = Expense::where('payment_type', 'online')->sum('cash_amount');
 
             //get cheque and online inflow
-            $bank_inflow=BankLedger::sum('cr_amount');
-            $bank_outflow=BankLedger::sum('dr_amount');
             // $cheque_amount = CustomerLedger::where('customer_type','party')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
             // $cash_amount = CustomerLedger::where('customer_type','party')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
             
             // $cheque_amount_investor = CustomerLedger::where('customer_type','investor')->where('entry_type','dr')->whereIn('payment_type', ['cheque', 'both'])->sum('cheque_amount');
             // $cash_amount_investor = CustomerLedger::where('customer_type','investor')->where('entry_type','dr')->where('payment_type', 'online')->sum('cash_amount');
+
+            $bank_inflow=BankLedger::sum('cr_amount');
+            $bank_outflow=BankLedger::sum('dr_amount');
 
             $data['opening_balance'] = $openingBalance;
             $data['cash_inflow']  = $inflowCashSum;

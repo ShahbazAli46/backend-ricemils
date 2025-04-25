@@ -28,8 +28,7 @@ trait CompanyLedgerTrait
         }
         $current_balance=($previousBalance+$tranData['cr_amount'])-$tranData['dr_amount'];
         $tranData['balance']=$current_balance;
-        CompanyLedger::create($tranData);
-        return 1;
+        return CompanyLedger::create($tranData);
     }
     
 

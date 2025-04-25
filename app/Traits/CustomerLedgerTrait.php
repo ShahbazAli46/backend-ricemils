@@ -92,7 +92,7 @@ trait CustomerLedgerTrait
             $bank->save();
             
             $bankTran['balance']=$bank->balance;
-            $bank->addBankTransection($bankTran);
+            return $bank->addBankTransection($bankTran);
         }else if($tranData['customer_type']=='party' &&  ($tranData['payment_type']=='cheque' || $tranData['payment_type']=='both' || $tranData['payment_type']=='online') && ($tranData['entry_type']=='cr' || $tranData['entry_type']=='dr' || $tranData['entry_type']=='dr&cr')){
             $bank=Bank::find($tranData['bank_id']);
           
@@ -131,7 +131,7 @@ trait CustomerLedgerTrait
             $bank->save();
 
             $bankTran['balance']=$bank->balance;
-            $bank->addBankTransection($bankTran);
+            return $bank->addBankTransection($bankTran);
         }else if($tranData['customer_type']=='self'){
             $bank=Bank::find($tranData['bank_id']);
             $add_amount=$tranData['cash_amount'];
@@ -151,7 +151,7 @@ trait CustomerLedgerTrait
             ];
 
             $bank->save();
-            $bank->addBankTransection($bankTran);
+            return $bank->addBankTransection($bankTran);
         }
     }
 

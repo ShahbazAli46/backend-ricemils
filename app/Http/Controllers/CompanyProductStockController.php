@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BankLedger;
+use App\Models\CompanyLedger;
 use App\Models\CompanyProductStock;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
@@ -9,6 +11,7 @@ use App\Models\Product;
 use App\Rules\CheckBankBalance;
 use App\Rules\ExistsNotSoftDeleted;
 use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
@@ -16,6 +19,21 @@ use Illuminate\Support\Facades\DB;
 
 class CompanyProductStockController extends Controller
 {
+    public function index(Request $request)
+    {
+        if($request->has('start_date') && $request->has('end_date')){
+            $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+            $receive_amt= CompanyProductStock::with(['linkable'])->where('entry_type','expense')->where('expense_entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+            return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $receive_amt]);
+        }else{
+            $receive_amt= CompanyProductStock::with(['linkable'])->where('entry_type','expense')->where('expense_entry_type','cr')->get();
+            return response()->json(['data' => $receive_amt]);
+        }
+        return response()->json(['data' => $receive_amt]); 
+    }
+
+
     //
     public function store(Request $request)
     {
@@ -104,6 +122,7 @@ class CompanyProductStockController extends Controller
 
             $exp_category = ExpenseCategory::firstOrCreate(['expense_category' => 'Product Expense']);
             $data_arr['expense_category_id'] = $exp_category->id;
+            $message="Product Expense Added Successfully.";
             if($original_total_amt>0){
                 $expense = Expense::create($data_arr);
                 $data_arr['balance']=$old_balance+$data_arr['total_amount'];
@@ -113,13 +132,17 @@ class CompanyProductStockController extends Controller
                 $data_arr['balance']=$old_balance-$data_arr['total_amount'];
                 $entry_type_com='dr';
                 $data_arr['expense_entry_type']='cr';
+                $message="Payment Received Successfully.";
             }
 
             $companyProductStock = CompanyProductStock::create($data_arr);
             $data_arr['customer_type']='party'; 
             $data_arr['entry_type']=$entry_type_com;
             
-            $companyProductStock->reCalculateBankBalance($data_arr);
+            $bankLedgerEntry=$companyProductStock->reCalculateBankBalance($data_arr);
+            if(isset($bankLedgerEntry)){
+                $companyProductStock->update(['linkable_id' => $bankLedgerEntry->id,'linkable_type' => BankLedger::class,]);
+            }
 
             if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
                 //company ledger
@@ -133,19 +156,24 @@ class CompanyProductStockController extends Controller
                     DB::rollBack();
                     return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
                 }
+                $companyProductStock->update(['linkable_id' => $res->id,'linkable_type' => CompanyLedger::class]);
             }
 
             DB::commit();
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Product Expense Added Successfully.',
-            ], Response::HTTP_CREATED); // 201 Created
+            return response()->json(['status' => 'success','message' => $message], Response::HTTP_CREATED); // 201 Created
         } catch (Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to Add Product Expense. ' . $e->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return response()->json(['status' => 'error','message' => 'Failed to Add Product Expense. ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $com_product_detail=CompanyProductStock::with(['linkable'])->where('id',$id)->firstOrFail();
+            return response()->json(['data' => $com_product_detail]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status'=>'error', 'message' => 'Product Stock Not Found.'], Response::HTTP_NOT_FOUND);
         }
     }
 }
