@@ -11,7 +11,7 @@ class AdvanceCheque extends Model
     public $table="advance_cheques";
 
     protected $fillable = [
-        'customer_id','bank_id','description','cheque_amount','cheque_no','cheque_date','customer_type','is_deferred'
+        'customer_id','bank_id','description','cheque_amount','cheque_no','cheque_date','customer_type','is_deferred','user_id'
     ];
 
     public function bank()
@@ -24,4 +24,8 @@ class AdvanceCheque extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

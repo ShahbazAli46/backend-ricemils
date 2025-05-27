@@ -28,6 +28,7 @@ trait CompanyLedgerTrait
         }
         $current_balance=($previousBalance+$tranData['cr_amount'])-$tranData['dr_amount'];
         $tranData['balance']=$current_balance;
+        $tranData['user_id']=auth()->id();
         return CompanyLedger::create($tranData);
     }
     
@@ -70,6 +71,7 @@ trait CompanyLedgerTrait
     {
         try {
             $company_ledger = CompanyLedger::findOrFail($tranData['id']);
+            $tranData['user_id']=auth()->id();
             $company_ledger->update($tranData);
             $this->reCalculateCompanyTranBlnc($company_ledger->id,$company_ledger->balance);
             return response()->json(['status'=>'success','message' => 'Ledger Updated Successfully']);

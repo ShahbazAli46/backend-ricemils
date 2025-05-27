@@ -10,7 +10,7 @@ class BankLedger extends Model
     use HasFactory;
     public $table="bank_ledgers";
     protected $fillable = ['bank_id','description','dr_amount','cr_amount','entry_type','payment_type','cheque_amount',
-    'cheque_no','cheque_date','online_amount','transection_id','linkable_id','linkable_type','link_name','balance','created_at','updated_at'];
+    'cheque_no','cheque_date','online_amount','transection_id','linkable_id','linkable_type','link_name','balance','created_at','updated_at','user_id'];
     
     public function bank()
     {
@@ -20,5 +20,10 @@ class BankLedger extends Model
     public function linkable()
     {
         return $this->morphTo();
+    }
+    
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

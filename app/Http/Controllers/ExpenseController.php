@@ -27,11 +27,11 @@ class ExpenseController extends Controller
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
             
-            $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name'])
+            $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:id,name,email,status'])
             ->whereBetween('created_at', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $expense]);
         }else{
-            $expense=Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name'])->get();
+            $expense=Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:id,name,email,status'])->get();
             return response()->json(['data' => $expense]);
         }
     }
@@ -109,6 +109,7 @@ class ExpenseController extends Controller
                 'cheque_date' => $request->cheque_date,
                 'bank_id' => $request->bank_id,
                 'transection_id' => $payment_type=='online'?$request->transection_id:null,
+                'user_id' => auth()->id(),
             ];
             
             $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
@@ -154,7 +155,7 @@ class ExpenseController extends Controller
     public function show($id)
     {
         try {
-            $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name'])->findOrFail($id);
+            $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:id,name,email,status'])->findOrFail($id);
             return response()->json(['data' => $expense]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Expense Not Found.'], Response::HTTP_NOT_FOUND);
@@ -218,6 +219,7 @@ class ExpenseController extends Controller
                 'cheque_date' => $request->cheque_date,
                 'bank_id' => $request->bank_id,
                 'transection_id' => $payment_type=='online'?$request->transection_id:null,
+                'user_id' => auth()->id(),
             ];
 
             $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;

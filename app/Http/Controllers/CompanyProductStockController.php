@@ -109,6 +109,7 @@ class CompanyProductStockController extends Controller
                 'entry_type' => 'expense',
                 'linkable_id' => $request->input('product_id'),
                 'linkable_type' => Product::class,
+                'user_id' => auth()->id(),
             ];
 
             $data_arr['cash_amount']= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') ) ? $request->cash_amount : 0;

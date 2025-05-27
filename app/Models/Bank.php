@@ -41,6 +41,7 @@ class Bank extends Model
 
     public function addBankTransection($tranData)
     {
+        $tranData['user_id']=auth()->id();
         return BankLedger::create($tranData);
     }
 

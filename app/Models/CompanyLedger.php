@@ -12,6 +12,12 @@ class CompanyLedger extends Model
     public $table="company_ledgers";
 
     protected $fillable = [
-        'dr_amount', 'cr_amount', 'description', 'entry_type', 'link_id', 'link_name', 'balance'
+        'dr_amount', 'cr_amount', 'description', 'entry_type', 'link_id', 'link_name', 'balance','user_id'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
 }
