@@ -30,7 +30,7 @@ class UserController extends Controller
             'name' => 'required|string|max:100',
             'email' => 'required|string|email|max:100|unique:users,email',
             'password' => 'required|string|min:2|max:100', 
-            'permissions' => 'required|json', 
+            'permissions' => 'required', 
         ]);
         
         if ($validator->fails()) {
