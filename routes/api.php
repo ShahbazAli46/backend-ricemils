@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, CompanyProductStockController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController, SelfPaymentController};
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, CompanyProductStockController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController, SelfPaymentController, UserController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,6 +18,10 @@ Route::post('login', [AuthController::class,'login']);
 
 Route::middleware('auth:sanctum')->group( function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    Route::apiResource('user', UserController::class);
+    Route::post('/user/{id}', [UserController::class, 'update']);
+    Route::post('user/{user}/status', [UserController::class, 'toggleStatus'])->name('user.toggleStatus');
 
     // Route::apiResource('supplier', SupplierController::class);
     // Route::post('/supplier/{id}', [SupplierController::class, 'update']);

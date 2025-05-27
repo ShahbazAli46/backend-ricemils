@@ -28,27 +28,34 @@ class AuthController extends Controller
         try {
             $admin = User::where('email', $request->email)->first();
             if($admin){
-                if (!Hash::check($request->password, $admin->password)) {
+                if($admin->status=='active'){
+                    if (!Hash::check($request->password, $admin->password)) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Invalid credentials',
+                        ]);
+                    }
+
+                    // Generate a plain text token for the seller
+                    $token = $admin->createToken('user-token')->plainTextToken;
+
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => 'Login Successful',
+                        'admin' => $admin,
+                        'token' => $token,
+                    ]);      
+                }else{
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'Invalid credentials',
-                    ]);
+                        'message' => 'Your account is disabled. Please contact the administrator.',
+                    ]); 
                 }
-
-                // Generate a plain text token for the seller
-                $token = $admin->createToken('user-token')->plainTextToken;
-
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'Login Successful',
-                    'admin' => $admin,
-                    'token' => $token,
-                ]);                
             }else{
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Your Email Does not Exist.',
-                ]); // 403 Forbidden status code
+                ]);
             }
         } catch (\Exception $e) {
             return response()->json([
