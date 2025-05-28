@@ -163,6 +163,7 @@ class PurchaseBookController extends Controller
                 'total_amount' => $total_amount,
                 'rem_amount' => $rem_amount,
                 'description' => $request->description,
+                'user_id' => auth()->id()
             ]);
 
             if (!$purchaseBook) {
@@ -232,7 +233,8 @@ class PurchaseBookController extends Controller
                 'price_mann' => $request->price_mann,
                 'total_amount' => $total_amount,
                 'balance' => $old_balance+$total_amount,
-                'party_id' => $purchaseBook->sup_id
+                'party_id' => $purchaseBook->sup_id,
+                'user_id' => auth()->id(),
             ]);
 
 

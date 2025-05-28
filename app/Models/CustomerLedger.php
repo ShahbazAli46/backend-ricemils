@@ -13,7 +13,8 @@ class CustomerLedger extends Model
     public $table="customer_ledgers";
 
     protected $fillable = [
-        'customer_id','bank_id','description','dr_amount','cr_amount','cash_amount','payment_type','cheque_amount','cheque_no','cheque_date','transection_id','customer_type','book_id','entry_type','balance','bank_tax'
+        'customer_id','bank_id','description','dr_amount','cr_amount','cash_amount','payment_type','cheque_amount','cheque_no',
+        'cheque_date','transection_id','customer_type','book_id','entry_type','balance','bank_tax','user_id'
     ];
 
     // Define the relationship with the customer
@@ -30,5 +31,10 @@ class CustomerLedger extends Model
     public function bank()
     {
         return $this->belongsTo(Bank::class,'bank_id');
+    }
+    
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

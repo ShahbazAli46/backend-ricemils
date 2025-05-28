@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\CompanyLedger;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Response;
@@ -29,13 +30,13 @@ class InvestorLedgerController extends Controller
                     $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                     $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
                     $customer->ledgers= $customer->load(['ledgers' => function($query) use ($startDate, $endDate) {
-                        $query->whereBetween('created_at', [$startDate, $endDate])->with('bank:id,bank_name'); // Include bank details
+                        $query->whereBetween('created_at', [$startDate, $endDate])->with(['bank:id,bank_name','user:'. User::SELECT_BASIC_STRING]); // Include bank details
                     }]);
                     // $customer->ledgers = $customer->ledgers()->whereBetween('created_at', [$startDate, $endDate])->get();
                     return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
                 }else{
                     $customer->ledgers= $customer->load(['ledgers' => function($query) {
-                        $query->with('bank:id,bank_name'); // Include bank details
+                        $query->with(['bank:id,bank_name','user:'. User::SELECT_BASIC_STRING]); // Include bank details
                     }]);
                     // $customer->ledgers = $customer->ledgers()->get();
                     return response()->json(['data' => $customer]);
@@ -47,10 +48,10 @@ class InvestorLedgerController extends Controller
             if($request->has('start_date') && $request->has('end_date')){
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                $investor_ledger = CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','investor')->whereBetween('created_at', [$startDate, $endDate])->get();
+                $investor_ledger = CustomerLedger::with(['customer:id,person_name','bank:id,bank_name','user:'. User::SELECT_BASIC_STRING])->where('customer_type','investor')->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $investor_ledger]);
             }else{
-                $investor_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','investor')->get();
+                $investor_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name','user:'. User::SELECT_BASIC_STRING])->where('customer_type','investor')->get();
                 return response()->json(['data' => $investor_ledger]);
             }
         }
@@ -67,14 +68,14 @@ class InvestorLedgerController extends Controller
                     $customer->ledgers= $customer->load(['ledgers' => function($query) use ($startDate, $endDate) {
                         $query->where('entry_type', 'dr')
                               ->whereBetween('created_at', [$startDate, $endDate])
-                              ->with('bank:id,bank_name'); // Include bank details
+                              ->with(['bank:id,bank_name','user:'. User::SELECT_BASIC_STRING]); // Include bank details
                     }]);
                     // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
                     return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
                 }else{
                     $customer->ledgers= $customer->load(['ledgers' => function($query) {
                         $query->where('entry_type', 'dr')
-                              ->with('bank:id,bank_name'); // Include bank details
+                              ->with(['bank:id,bank_name','user:'. User::SELECT_BASIC_STRING]); // Include bank details
                     }]);
                     // $customer->ledgers = $customer->ledgers()->where('entry_type','cr')->get();
                     return response()->json(['data' => $customer]);
@@ -86,10 +87,10 @@ class InvestorLedgerController extends Controller
             if($request->has('start_date') && $request->has('end_date')){
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                $investor_ledger = CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('customer_type','investor')->where('entry_type','dr')->whereBetween('created_at', [$startDate, $endDate])->get();
+                $investor_ledger = CustomerLedger::with(['customer:id,person_name','bank:id,bank_name','user:'. User::SELECT_BASIC_STRING])->where('customer_type','investor')->where('entry_type','dr')->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $investor_ledger]);
             }else{
-                $investor_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name'])->where('entry_type','dr')->where('customer_type','investor')->get();
+                $investor_ledger =CustomerLedger::with(['customer:id,person_name','bank:id,bank_name','user:'. User::SELECT_BASIC_STRING])->where('entry_type','dr')->where('customer_type','investor')->get();
                 return response()->json(['data' => $investor_ledger]);
             }
         }
@@ -249,7 +250,7 @@ class InvestorLedgerController extends Controller
     public function show($id)
     {
         try {
-            $investor_ledger = CustomerLedger::with(['customer:id,person_name'])->findOrFail($id);
+            $investor_ledger = CustomerLedger::with(['customer:id,person_name','user:'. User::SELECT_BASIC_STRING])->findOrFail($id);
             return response()->json(['data' => $investor_ledger]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Investor Ledger Not Found.'], Response::HTTP_NOT_FOUND);

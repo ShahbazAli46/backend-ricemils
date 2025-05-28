@@ -12,7 +12,7 @@ class SaleBook extends Model
     public $table="sale_book";
 
     protected $fillable = [
-       'ref_no','reference_no','buyer_id','truck_no', 'bank_id','packing_type','date','total_amount','description'
+       'ref_no','reference_no','buyer_id','truck_no', 'bank_id','packing_type','date','total_amount','description','user_id'
     ];
 
     public function details()
@@ -37,6 +37,11 @@ class SaleBook extends Model
         return $this->hasOne(CustomerLedger::class, 'book_id');
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    
     //add custom sale book id according to id
     protected static function boot()
     {

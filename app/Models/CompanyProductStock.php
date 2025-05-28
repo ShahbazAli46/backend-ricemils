@@ -14,7 +14,7 @@ class CompanyProductStock extends Model
 
     protected $fillable = [
         'product_id', 'total_weight', 'stock_in', 'stock_out','remaining_weight', 'linkable_id', 'linkable_type','entry_type','price','price_mann',
-        'total_amount','balance','party_id','description','expense_entry_type'
+        'total_amount','balance','party_id','description','expense_entry_type','user_id'
     ];
 
     public function product()
@@ -30,5 +30,10 @@ class CompanyProductStock extends Model
     public function party()
     {
         return $this->belongsTo(Customer::class, 'party_id','');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

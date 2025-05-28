@@ -81,6 +81,7 @@ class ProductController extends Controller
                 'price_mann' => $request->opening_price_mann,
                 'total_amount' => $request->opening_total_amount,
                 'balance' => $request->opening_total_amount,
+                'user_id' => auth()->id(),
             ]);
 
             DB::commit();

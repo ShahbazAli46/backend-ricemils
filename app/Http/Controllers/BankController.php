@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bank;
 use App\Models\CustomerLedger;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Response;
@@ -32,12 +33,12 @@ class BankController extends Controller
 
                 $bank = Bank::with(['bankLedger' => function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('created_at', [$startDate, $endDate])
-                          ->with(['linkable','user:id,name,email,status']); // Load 'customer' within 'customerLedger' after filtering by date
+                          ->with(['linkable','user:'.User::SELECT_BASIC_STRING]); // Load 'customer' within 'customerLedger' after filtering by date
                 }])->findOrFail($id);
                 
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $bank]);
             }else{
-                $bank = Bank::with(['bankLedger.linkable','bankLedger.user:id,name,email,status'])->findOrFail($id);
+                $bank = Bank::with(['bankLedger.linkable','bankLedger.user:'.User::SELECT_BASIC_STRING])->findOrFail($id);
                 return response()->json(['data' => $bank]);
             }
         } catch (ModelNotFoundException $e) {
@@ -114,14 +115,14 @@ class BankController extends Controller
                 }])
                 ->with(['advanceCheques' => function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('created_at', [$startDate, $endDate])
-                        ->with(['customer:id,person_name','user:id,name,email,status']);  // Eager load the customer with specific fields
+                        ->with(['customer:id,person_name','user:'.User::SELECT_BASIC_STRING]);  // Eager load the customer with specific fields
                 }])
                 ->withSum(['advanceCheques' => function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('created_at', [$startDate, $endDate]);
                 }], 'cheque_amount')->firstOrFail(); 
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $bank]);
             }else{
-                $bank = Bank::withCount('advanceCheques')->withSum('advanceCheques', 'cheque_amount')->with(['advanceCheques.customer:id,person_name','advanceCheques.user:id,name,email,status'])->findOrFail($id);
+                $bank = Bank::withCount('advanceCheques')->withSum('advanceCheques', 'cheque_amount')->with(['advanceCheques.customer:id,person_name','advanceCheques.user:'.User::SELECT_BASIC_STRING])->findOrFail($id);
                 return response()->json(['data' => $bank]);
             }
         } catch (ModelNotFoundException $e) {

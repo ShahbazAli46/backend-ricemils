@@ -29,6 +29,7 @@ trait CustomerLedgerTrait
         if (!$customer) {
             return 0;
         }
+        $tranData['user_id']=auth()->id();
         $res=CustomerLedger::create($tranData);
         $this->reCalculateCrntBlnc($tranData['customer_id']);
         $this->reCalculateBankBalance($tranData);

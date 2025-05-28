@@ -9,6 +9,7 @@ use App\Models\Packing;
 use App\Models\Product;
 use App\Models\SaleBook;
 use App\Models\SaleBookDetail;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Response;
@@ -212,10 +213,10 @@ class SaleBookController extends Controller
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
-            $sale_book = SaleBook::with(['details','party:id,person_name'])->whereBetween('date', [$startDate, $endDate])->get();
+            $sale_book = SaleBook::with(['details','party:id,person_name','user:'.User::SELECT_BASIC_STRING])->whereBetween('date', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $sale_book]);
         }else{
-            $sale_book=SaleBook::with(['details','party:id,person_name'])->get();
+            $sale_book=SaleBook::with(['details','party:id,person_name','user:'.User::SELECT_BASIC_STRING])->get();
             return response()->json(['data' => $sale_book]);
         }
     }
@@ -259,6 +260,7 @@ class SaleBookController extends Controller
 
                 $saleBook->order_status='completed';
                 $saleBook->description=$request->description;
+                $saleBook->user_id=auth()->id();
                 $saleBook->save();
                 $saleBook->details()->update(['order_status' => 'completed']);
 
@@ -305,7 +307,8 @@ class SaleBookController extends Controller
                         'price_mann' => $detail->price_mann,
                         'total_amount' => $detail->total_amount,
                         'balance' => $old_balance-$detail->total_amount,
-                        'party_id' => $saleBook->buyer_id
+                        'party_id' => $saleBook->buyer_id,
+                        'user_id' => auth()->id(),
                     ]);
                 }
 
@@ -331,7 +334,7 @@ class SaleBookController extends Controller
     public function show($id)
     {
         try {
-            $sale_book = SaleBook::with(['details','party'])->findOrFail($id);
+            $sale_book = SaleBook::with(['details','party','user:'.User::SELECT_BASIC_STRING])->findOrFail($id);
             return response()->json(['data' => $sale_book]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Sale Order Not Found.'], Response::HTTP_NOT_FOUND);

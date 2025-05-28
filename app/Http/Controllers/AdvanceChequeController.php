@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdvanceCheque;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Response;
@@ -29,10 +30,10 @@ class AdvanceChequeController extends Controller
                 if($request->has('start_date') && $request->has('end_date')){
                     $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                     $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                    $customer->cheques = $customer->advanceCheques()->with(['user:id,name,email,status'])->whereBetween('created_at', [$startDate, $endDate])->get();
+                    $customer->cheques = $customer->advanceCheques()->with(['user:'.User::SELECT_BASIC_STRING])->whereBetween('created_at', [$startDate, $endDate])->get();
                     return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $customer]);
                 }else{
-                    $customer->cheques = $customer->advanceCheques()->with(['user:id,name,email,status'])->get();
+                    $customer->cheques = $customer->advanceCheques()->with(['user:'.User::SELECT_BASIC_STRING])->get();
                     return response()->json(['data' => $customer]);
                 }
             }else{
@@ -42,10 +43,10 @@ class AdvanceChequeController extends Controller
             if($request->has('start_date') && $request->has('end_date')){
                 $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-                $party_cheques = AdvanceCheque::with(['customer:id,person_name','user:id,name,email,status'])->whereBetween('created_at', [$startDate, $endDate])->get();
+                $party_cheques = AdvanceCheque::with(['customer:id,person_name','user:'.User::SELECT_BASIC_STRING])->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $party_cheques]);
             }else{
-                $party_cheques =AdvanceCheque::with(['customer:id,person_name','user:id,name,email,status'])->get();
+                $party_cheques =AdvanceCheque::with(['customer:id,person_name','user:'.User::SELECT_BASIC_STRING])->get();
                 return response()->json(['data' => $party_cheques]);
             }
         }
@@ -115,7 +116,7 @@ class AdvanceChequeController extends Controller
     public function show($id)
     {
         try {
-            $party_cheques = AdvanceCheque::with(['customer:id,person_name','user:id,name,email,status'])->findOrFail($id);
+            $party_cheques = AdvanceCheque::with(['customer:id,person_name','user:'.User::SELECT_BASIC_STRING])->findOrFail($id);
             return response()->json(['data' => $party_cheques]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Party Advance Cheque Not Found.'], Response::HTTP_NOT_FOUND);

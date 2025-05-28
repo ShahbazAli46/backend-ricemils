@@ -8,6 +8,7 @@ use App\Models\CompanyProductStock;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\Product;
+use App\Models\User;
 use App\Rules\CheckBankBalance;
 use App\Rules\ExistsNotSoftDeleted;
 use Exception;
@@ -24,10 +25,10 @@ class CompanyProductStockController extends Controller
         if($request->has('start_date') && $request->has('end_date')){
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
-            $receive_amt= CompanyProductStock::with(['linkable'])->where('entry_type','expense')->where('expense_entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
+            $receive_amt= CompanyProductStock::with(['linkable','user:'.User::SELECT_BASIC_STRING])->where('entry_type','expense')->where('expense_entry_type','cr')->whereBetween('created_at', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $receive_amt]);
         }else{
-            $receive_amt= CompanyProductStock::with(['linkable'])->where('entry_type','expense')->where('expense_entry_type','cr')->get();
+            $receive_amt= CompanyProductStock::with(['linkable','user:'.User::SELECT_BASIC_STRING])->where('entry_type','expense')->where('expense_entry_type','cr')->get();
             return response()->json(['data' => $receive_amt]);
         }
         return response()->json(['data' => $receive_amt]); 
@@ -171,7 +172,7 @@ class CompanyProductStockController extends Controller
     public function show($id)
     {
         try {
-            $com_product_detail=CompanyProductStock::with(['linkable'])->where('id',$id)->firstOrFail();
+            $com_product_detail=CompanyProductStock::with(['linkable','user:'.User::SELECT_BASIC_STRING])->where('id',$id)->firstOrFail();
             return response()->json(['data' => $com_product_detail]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Product Stock Not Found.'], Response::HTTP_NOT_FOUND);
