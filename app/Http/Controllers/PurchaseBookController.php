@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Product;
 use App\Models\PurchaseBook;
+use App\Models\User;
 use App\Rules\CheckBankBalance;
 use App\Rules\CheckCashBalance;
 use Illuminate\Http\Request;
@@ -32,10 +33,10 @@ class PurchaseBookController extends Controller
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
-            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name'])->whereBetween('created_at', [$startDate, $endDate])->get();
+            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING])->whereBetween('created_at', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $purchase_book]);
         }else{
-            $purchase_book=PurchaseBook::with(['product:id,product_name','party:id,person_name'])->get();
+            $purchase_book=PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING])->get();
             return response()->json(['data' => $purchase_book]);
         }
     }
@@ -256,7 +257,7 @@ class PurchaseBookController extends Controller
     public function show($id)
     {
         try {
-            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name'])->findOrFail($id);
+            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING])->findOrFail($id);
             return response()->json(['data' => $purchase_book]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Purchase Order Not Found.'], Response::HTTP_NOT_FOUND);
