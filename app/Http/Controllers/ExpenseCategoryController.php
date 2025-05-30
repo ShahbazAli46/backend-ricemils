@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ExpenseCategory;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Response;
@@ -68,7 +69,7 @@ class ExpenseCategoryController extends Controller
                 
                 $expense_category = ExpenseCategory::where('id', $id)
                 ->with(['expenses' => function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                    $query->with(['user:'. User::SELECT_BASIC_STRING])->whereBetween('created_at', [$startDate, $endDate]);
                 }])
                 ->withSum(['expenses' => function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('created_at', [$startDate, $endDate]);
@@ -76,7 +77,7 @@ class ExpenseCategoryController extends Controller
                 ->firstOrFail(); 
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $expense_category]);
             }else{
-                $expense_category = ExpenseCategory::withSum('expenses', 'total_amount')->with(['expenses'])->findOrFail($id);
+                $expense_category = ExpenseCategory::withSum('expenses', 'total_amount')->with(['expenses.user:'. User::SELECT_BASIC_STRING])->findOrFail($id);
                 return response()->json(['data' => $expense_category]);
             }
         } catch (ModelNotFoundException $e) {
