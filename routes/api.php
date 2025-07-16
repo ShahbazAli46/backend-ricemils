@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, CompanyProductStockController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController, SelfPaymentController, UserController};
+use App\Http\Controllers\{AuthController, BankController, BuyerController, SupplierController, ExpenseCategoryController, ExpenseController, PackingController, PaymentInFlowController, ProductStockController,ProductController,PaymentOutFlowController, PurchaseBookController, SaleBookController, SupplierLedgerController,BuyerLedgerController, AdvanceChequeController, CompanyLedgerController, CompanyProductStockController, DashboardController, InvestorController, InvestorLedgerController, PartyController, PartyLedgerController, SeasonSummaryController, SelfPaymentController, UserController};
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -55,7 +55,7 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::post('/expense_category/{id}', [ExpenseCategoryController::class, 'update']);
     
     Route::apiResource('expense', ExpenseController::class);
-    Route::post('/expense/{id}', [ExpenseController::class, 'update']);
+    // Route::post('/expense/{id}', [ExpenseController::class, 'update']);
     
     Route::apiResource('purchase_book', PurchaseBookController::class);
     // Route::post('/purchase_book/{id}', [PurchaseBookController::class, 'update']);
@@ -79,8 +79,12 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::get('/sale_book/clear_items/{id}', [SaleBookController::class, 'ClearItems']);
 
     Route::apiResource('sale_book', SaleBookController::class);
-    Route::post('/sale_book/{id}', [SaleBookController::class, 'update']);
+    // Route::post('/sale_book/{id}', [SaleBookController::class, 'update']);
 
+    Route::apiResource('expense_category', ExpenseCategoryController::class);
+    Route::post('/expense_category/{id}', [ExpenseCategoryController::class, 'update']);
+
+    Route::apiResource('season_summary', SeasonSummaryController::class);
 
     // Route::apiResource('buyer_ledger', BuyerLedgerController::class);
     // Route::get('/received_buyer_amount', [BuyerLedgerController::class, 'receivedBuyerAmount']);

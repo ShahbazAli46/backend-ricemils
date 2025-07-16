@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Product;
 use App\Models\PurchaseBook;
+use App\Models\SeasonSummary;
 use App\Models\User;
 use App\Rules\CheckBankBalance;
 use App\Rules\CheckCashBalance;
@@ -65,6 +66,7 @@ class PurchaseBookController extends Controller
             'date' => 'nullable|date',
             // 'payment_type' => 'required|in:cash,cheque,both,online',
             'description'=> 'nullable|string',
+            'season_id' => ['required', 'exists:season_summaries,id'],
         ];   
         
         // if ($request->input('payment_type') == 'cheque') {
@@ -164,13 +166,16 @@ class PurchaseBookController extends Controller
                 'total_amount' => $total_amount,
                 'rem_amount' => $rem_amount,
                 'description' => $request->description,
-                'user_id' => auth()->id()
+                'user_id' => auth()->id(),
+                'season_id' => $request->season_id
             ]);
 
             if (!$purchaseBook) {
                 DB::rollBack();
                 return response()->json(['status' => 'error','message' => 'Failed to Add Purchase Order.',], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
+
+            SeasonSummary::where('id', $request->season_id)->increment('purchase_amount', $purchaseBook->total_amount);
 
             $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>$request->description,'dr_amount'=>$total_amount,'cr_amount'=>0.00,
             'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>null,'cheque_amount'=>0.00,

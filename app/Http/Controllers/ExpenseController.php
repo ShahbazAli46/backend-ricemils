@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bank;
 use App\Models\CompanyLedger;
 use App\Models\Expense;
+use App\Models\SeasonSummary;
 use App\Models\User;
 use App\Rules\CheckBankBalance;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use Exception;
 use App\Rules\ExistsNotSoftDeleted;
+use Hamcrest\Core\Set;
 use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
@@ -49,6 +51,7 @@ class ExpenseController extends Controller
             'expense_category_id' => ['required', 'exists:expense_categories,id', new ExistsNotSoftDeleted('expense_categories')],
             'payment_type' => 'required|in:cash,cheque,both,online',
             'description' => 'nullable|string',
+            'season_id' => ['required', 'exists:season_summaries,id'],
         ];
         $is_bank_entry=false;
         if ($request->input('payment_type') == 'cheque') {
@@ -103,6 +106,7 @@ class ExpenseController extends Controller
             // Start a transaction
             DB::beginTransaction();
             $data_arr=[
+                'season_id' => $request->input('season_id'),
                 'expense_category_id' => $request->input('expense_category_id'),
                 'payment_type' => $request->input('payment_type'),
                 'description' => $request->input('description'),
@@ -117,6 +121,8 @@ class ExpenseController extends Controller
             $data_arr['cheque_amount']= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
             $data_arr['total_amount']=$data_arr['cash_amount']+$data_arr['cheque_amount'];
             $expense = Expense::create($data_arr);
+
+            SeasonSummary::where('id', $request->season_id)->increment('expense_amount', $expense->total_amount);
 
             $data_arr['customer_type']='party'; 
             $data_arr['entry_type']='cr';

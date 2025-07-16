@@ -12,7 +12,7 @@ class SaleBook extends Model
     public $table="sale_book";
 
     protected $fillable = [
-       'ref_no','reference_no','buyer_id','truck_no', 'bank_id','packing_type','date','total_amount','description','user_id'
+       'ref_no','reference_no','buyer_id','truck_no', 'bank_id','packing_type','date','total_amount','description','user_id','season_id'
     ];
 
     public function details()
@@ -40,6 +40,10 @@ class SaleBook extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function season(){
+        return $this->belongsTo(SeasonSummary::class,'season_id');
     }
     
     //add custom sale book id according to id

@@ -9,6 +9,7 @@ use App\Models\Packing;
 use App\Models\Product;
 use App\Models\SaleBook;
 use App\Models\SaleBookDetail;
+use App\Models\SeasonSummary;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -232,6 +233,7 @@ class SaleBookController extends Controller
         $rules = [
             'sale_book_id' => ['required','exists:sale_book,id'],
             'description'=> 'nullable|string',
+            'season_id' => ['required', 'exists:season_summaries,id'],
         ];  
 
         $validator = Validator::make($request->all(), $rules);
@@ -261,6 +263,7 @@ class SaleBookController extends Controller
                 $saleBook->order_status='completed';
                 $saleBook->description=$request->description;
                 $saleBook->user_id=auth()->id();
+                $saleBook->season_id=$request->season_id;
                 $saleBook->save();
                 $saleBook->details()->update(['order_status' => 'completed']);
 
@@ -284,6 +287,7 @@ class SaleBookController extends Controller
                     DB::rollBack();
                     return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.',], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
                 }
+                SeasonSummary::where('id', $request->season_id)->increment('sale_amount', $saleBook->total_amount);
 
                 // Add company stock entry
                 $sale_book_details=$saleBook->details()->get();

@@ -16,7 +16,7 @@ class PurchaseBook extends Model
        'serial_no', 'sup_id','pro_id', 'bank_id','bardaana_type','truck_no','net_weight','khoot','chungi','bardaana_deduction',
        'bardaana_amount','final_weight','bardaana_quantity','weight_per_bag','freight','price','price_mann','bank_tax',
        'total_amount','date','payment_type','cash_amount','cheque_amount','cheque_no','cheque_date','transection_id',
-       'net_amount','rem_amount','description','user_id'
+       'net_amount','rem_amount','description','user_id','season_id'
     ];
             
     // Define the relationship with the Product model
@@ -39,6 +39,10 @@ class PurchaseBook extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function season(){
+        return $this->belongsTo(SeasonSummary::class,'season_id');
     }
 
     //add custom purchase book id according to id
