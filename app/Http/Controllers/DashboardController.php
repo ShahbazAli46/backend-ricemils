@@ -105,19 +105,28 @@ class DashboardController extends Controller
 
     public function drApi(Request $request)
     {
+        $expense_categories = ExpenseCategory::query();
         if($request->has('start_date') && $request->has('end_date')){
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
             
-            $expense_categories = ExpenseCategory::withSum(['expenses' => function ($query) use ($startDate, $endDate) {
+            $expense_categories = $expense_categories->withSum(['expenses' => function ($query) use ($startDate, $endDate, $request) {
                     $query->whereBetween('created_at', [$startDate, $endDate]);
+                    if($request->has('season_id')){
+                        $query->where('season_id', $request->season_id);
+                    }
                 }], 'total_amount')->get(); 
 
             $data['start_date'] = $startDate;
             $data['end_date'] = $endDate;
         }else{
-            $expense_categories = ExpenseCategory::withSum('expenses', 'total_amount')->get();
+            $expense_categories = $expense_categories->withSum(['expenses' => function ($query) use ($request) {
+                if($request->has('season_id')){
+                    $query->where('season_id', $request->season_id);
+                }
+            }], 'total_amount')->get();
         }
+
         $data['expense_categories'] = $expense_categories;
 
         $parties = Customer::where('customer_type','party')->get();

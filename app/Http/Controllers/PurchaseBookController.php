@@ -34,10 +34,10 @@ class PurchaseBookController extends Controller
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
 
-            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING])->whereBetween('created_at', [$startDate, $endDate])->get();
+            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING,'season:id,name'])->whereBetween('created_at', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $purchase_book]);
         }else{
-            $purchase_book=PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING])->get();
+            $purchase_book=PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING,'season:id,name'])->get();
             return response()->json(['data' => $purchase_book]);
         }
     }
@@ -262,7 +262,7 @@ class PurchaseBookController extends Controller
     public function show($id)
     {
         try {
-            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING])->findOrFail($id);
+            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING,'season:id,name'])->findOrFail($id);
             return response()->json(['data' => $purchase_book]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Purchase Order Not Found.'], Response::HTTP_NOT_FOUND);

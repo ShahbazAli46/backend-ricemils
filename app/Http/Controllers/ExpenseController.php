@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use Exception;
 use App\Rules\ExistsNotSoftDeleted;
-use Hamcrest\Core\Set;
 use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
@@ -30,11 +29,11 @@ class ExpenseController extends Controller
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
             
-            $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:'.User::SELECT_BASIC_STRING])
+            $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:'.User::SELECT_BASIC_STRING,'season:id,name'])
             ->whereBetween('created_at', [$startDate, $endDate])->get();
             return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $expense]);
         }else{
-            $expense=Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:'.User::SELECT_BASIC_STRING])->get();
+            $expense=Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:'.User::SELECT_BASIC_STRING,'season:id,name'])->get();
             return response()->json(['data' => $expense]);
         }
     }
@@ -162,7 +161,7 @@ class ExpenseController extends Controller
     public function show($id)
     {
         try {
-            $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:'.User::SELECT_BASIC_STRING])->findOrFail($id);
+            $expense = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:'.User::SELECT_BASIC_STRING,'season:id,name'])->findOrFail($id);
             return response()->json(['data' => $expense]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Expense Not Found.'], Response::HTTP_NOT_FOUND);
