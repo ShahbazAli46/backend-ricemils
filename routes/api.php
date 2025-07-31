@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::get('/dr/api', [DashboardController::class, 'drApi']);
     Route::get('/cr/api', [DashboardController::class, 'crApi']);
 
+    Route::get('/overall/amt_info', [DashboardController::class, 'getOverallAmtInfo']);
     Route::apiResource('company_ledger', CompanyLedgerController::class);
 });
 

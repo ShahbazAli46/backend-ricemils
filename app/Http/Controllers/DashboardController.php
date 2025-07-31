@@ -9,7 +9,10 @@ use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\PurchaseBook;
+use App\Models\SaleBook;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -145,6 +148,50 @@ class DashboardController extends Controller
     {
         $parties = Customer::where('customer_type','party')->get();
         $data['parties'] = $parties;
+        return response()->json(['data' => $data]);
+    }
+
+
+    public function getOverallAmtInfo(Request $request){
+        //get total payable and receiveable amount
+        $data['total_payable_amt'] = 0;
+        $data['total_receivable_amt'] = 0;
+        
+        $lastEntriesSubQuery = function ($query) {
+            $query->selectRaw('MAX(id)')->from('customer_ledgers')->groupBy('customer_id');
+        };
+
+        $balances = CustomerLedger::whereIn('id', $lastEntriesSubQuery)
+            ->whereIn('customer_type', ['investor', 'party'])->get()->groupBy('customer_type');
+
+        // Investor
+        $investorBalance = $balances->get('investor', collect())->sum('balance');
+        $payableFromInvestor = max($investorBalance, 0);
+        $receivableFromInvestor = min($investorBalance, 0);
+
+        // Party
+        $partyBalance = $balances->get('party', collect())->sum('balance');
+        $receivableFromParty = max($partyBalance, 0);
+        $payableFromParty = min($partyBalance, 0);
+
+        $data['total_payable_amt'] = number_format($payableFromInvestor + $payableFromParty, 2, '.', '');
+        $data['total_receivable_amt'] = number_format($receivableFromInvestor + $receivableFromParty, 2, '.', '');
+        $expenseQuery = Expense::query();
+
+        $purchaseQuery = PurchaseBook::query();
+        $saleQuery = SaleBook::query();
+
+        if($request->has('season_id')){
+            $expenseQuery->where('season_id', $request->season_id);
+            $purchaseQuery->where('season_id', $request->season_id);
+            $saleQuery->where('season_id', $request->season_id);
+        }
+        $totalPurchaseAmt = $purchaseQuery->sum('total_amount');
+        $totalSaleAmt = $saleQuery->sum('total_amount');
+        $data['total_stock_in_hand_amt']= (string)($totalPurchaseAmt-$totalSaleAmt);
+
+        $data['total_expense_amt'] = $expenseQuery->sum('total_amount');
+        $data['total_bank_balance'] = Bank::sum('balance');
         return response()->json(['data' => $data]);
     }
 }
