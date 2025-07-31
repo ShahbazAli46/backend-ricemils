@@ -7,6 +7,8 @@ use App\Models\CompanyLedger;
 use App\Models\CompanyProductStock;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Product;
 use App\Models\PurchaseBook;
 use App\Models\SeasonSummary;
@@ -53,14 +55,18 @@ class PurchaseBookController extends Controller
         $rules = [
             'sup_id' => ['required','exists:customers,id',new ExistsNotSoftDeleted('customers')],
             'pro_id' => ['required','exists:products,id',new ExistsNotSoftDeleted('products')],
-            'bardaana_type' => 'required|in:add,return,paid',
+            
+            'bardaana_type' => 'required|in:add,return,paid_as_cash,paid_as_ledger',
+            'bardaana_entry' => 'required',
+            'bardaana_amount' => 'nullable|numeric|min:0',
+            'total_bardaana_quantity' => 'required|numeric|min:1',
+            'bardaana_quantity' => 'required|numeric|min:0',
+
             'truck_no' => 'nullable|string|max:50',
             'net_weight' => 'required|numeric|min:1',
             'khoot' => 'required|numeric|min:0',
             'chungi' => 'required|numeric|min:0',
             'bardaana_deduction' => 'required|numeric|min:0',
-            'bardaana_amount' => 'nullable|numeric|min:0',
-            'bardaana_quantity' => 'required|numeric|min:1',
             'freight' => 'required|numeric|min:0',
             'price_mann' => 'required|numeric|min:1',
             'date' => 'nullable|date',
@@ -116,9 +122,10 @@ class PurchaseBookController extends Controller
             // calculate final weight,price and weight_per_bag
             $final_weight=$request->net_weight-($request->khoot+$request->chungi+$request->bardaana_deduction);
             $price = ($request->price_mann * $final_weight) / 40;
-            $weight_per_bag=$final_weight/$request->bardaana_quantity;
+            $weight_per_bag=$final_weight/$request->total_bardaana_quantity;
             
             $total_amount=$price;
+
             // $add_amount=0;
             // $cash_amount= (($payment_type == 'cash' || $payment_type == 'both' || $payment_type == 'online') && $request->has('cash_amount') && $request->cash_amount>0) ? $request->cash_amount : 0;
             // $cheque_amount= (($payment_type == 'cheque' || $payment_type == 'both')  && $request->has('cheque_amount') && $request->cheque_amount>0) ? $request->cheque_amount : 0;
@@ -136,7 +143,6 @@ class PurchaseBookController extends Controller
             $totalWithPreBlnc=$previousBalance-$total_amount;
             $rem_amount=$total_amount;
             $rem_blnc_amount=$totalWithPreBlnc;
-
             $purchaseBook = PurchaseBook::create([
                 'sup_id' => $request->sup_id,
                 'pro_id' => $request->pro_id,
@@ -146,9 +152,9 @@ class PurchaseBookController extends Controller
                 'khoot' => $request->khoot,
                 'chungi' => $request->chungi,
                 'bardaana_deduction' => $request->bardaana_deduction,
-                'bardaana_amount' => $request->filled('bardaana_amount')??0,
+                'bardaana_amount' => $request->filled('bardaana_amount')?$request->bardaana_amount:0,
                 'final_weight' => $final_weight,
-                'bardaana_quantity' => $request->bardaana_quantity,
+                'bardaana_quantity' => $request->total_bardaana_quantity,
                 'weight_per_bag' => $weight_per_bag,
                 'freight' => $request->freight,
                 'price' => $price,
@@ -174,6 +180,7 @@ class PurchaseBookController extends Controller
                 DB::rollBack();
                 return response()->json(['status' => 'error','message' => 'Failed to Add Purchase Order.',], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
+            
 
             SeasonSummary::where('id', $request->season_id)->increment('purchase_amount', $purchaseBook->total_amount);
 
@@ -210,6 +217,66 @@ class PurchaseBookController extends Controller
                 return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
 
+            $bardaana_amt=0;
+            if($request->bardaana_type=='add'){
+                $purchaseBook->purchaseBookBardaanaDetails()->create([
+                    'sup_id' => $request->sup_id,
+                    'bardaana_entry' => $request->bardaana_entry,
+                    'bardaana_type' => $request->bardaana_type,
+                    'total_bardaana_qty' => $request->bardaana_quantity,
+                    'bardaana_qty' => $request->bardaana_quantity,
+                    'remaining_bardaana_qty' => $request->bardaana_quantity,
+                    'bardaana_paid_amt' => 0,
+                    'date' => $request->input('date', now()),
+                    'user_id' => auth()->id(),
+                    'season_id' => $request->season_id
+                ]);
+            }else if($request->bardaana_type=='paid_as_cash' && $request->bardaana_amount>0){
+                $bardaana_amt=$request->bardaana_amount;
+
+                $expenseCategory=ExpenseCategory::firstOrCreate(
+                    ['expense_category' => 'Bardaana Expense'],
+                    ['expense_category' => 'Bardaana Expense']
+                );
+
+                $expense=Expense::create([
+                    'expense_category_id' => $expenseCategory->id,
+                    'payment_type' => 'cash',
+                    'description' => $request->input('description'),
+                    'cash_amount' => $bardaana_amt,
+                    'date' => $request->input('date', now()),
+                    'total_amount'=>$bardaana_amt,
+                    'user_id' => auth()->id(),
+                    'season_id' => $request->season_id
+                ]);
+
+                //company ledger
+                $transactionDataComp=['dr_amount'=>$bardaana_amt,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$expense->id,'link_name'=>'expense'];
+                $res=$expense->addCompanyTransaction($transactionDataComp);
+                if(!$res){
+                    DB::rollBack();
+                    return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                }
+            }else if($request->bardaana_type=='paid_as_ledger' && $request->bardaana_amount>0){
+                $bardaana_amt=$request->bardaana_amount;
+                $lastLedger = $supplier->ledgers()->orderBy('id', 'desc')->first();
+                $previousBalance=0.00;
+                if($lastLedger){
+                    $previousBalance=$lastLedger->balance;
+                }else{
+                    $previousBalance=$supplier->opening_balance;
+                }
+
+                $transactionData=['customer_id'=>$request->sup_id,'bank_id'=>null,'description'=>'Bardaana Payment','dr_amount'=>$bardaana_amt,'cr_amount'=>0.00,
+                'adv_amount'=>0.00,'cash_amount'=>0.00,'payment_type'=>null,'cheque_amount'=>0.00,
+                'cheque_no'=>null,'cheque_date'=>null,'transection_id'=>null,'customer_type'=>'party','book_id'=>$purchaseBook->id,'entry_type'=>'dr','balance'=>$previousBalance-$bardaana_amt];
+                $res=$purchaseBook->addTransaction($transactionData);
+                if(!$res){
+                    DB::rollBack();
+                    return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+                }
+            }
+            
             // if($request->input('payment_type') == 'cash' || $request->input('payment_type')=='both'){
             //     //company ledger
             //     $transactionDataComp=['dr_amount'=>$comp_debit_amt,'cr_amount'=>0.00,'description'=>$request->description,'entry_type'=>'dr','link_id'=>$purchaseBook->id,'link_name'=>'purchase'];
@@ -219,7 +286,7 @@ class PurchaseBookController extends Controller
             //         return response()->json(['status' => 'error','message' => 'Something Went Wrong Please Try Again Later.'], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             //     }
             // }
-
+            $total_amount=$total_amount+$bardaana_amt;
             // Add company stock entry
             $stock_balance = CompanyProductStock::where(['product_id'=> $request->pro_id])->latest()->first();
             $old_balance=$stock_balance?$stock_balance->balance:0;
@@ -237,22 +304,72 @@ class PurchaseBookController extends Controller
                 'entry_type' => 'purchase',
                 'price' => $price,
                 'price_mann' => $request->price_mann,
+                'bardaana_amt' => $bardaana_amt,
                 'total_amount' => $total_amount,
                 'balance' => $old_balance+$total_amount,
                 'party_id' => $purchaseBook->sup_id,
                 'user_id' => auth()->id(),
             ]);
 
-
             // Commit the transaction
             DB::commit();
-            return response()->json(['status' => 'success','message' => 'Purchase Order Added Successfully.',], Response::HTTP_CREATED); // 201 Created
+            return response()->json(['status' => 'success','message' => 'Purchase Order Added Successfully.','data'=>$purchaseBook], Response::HTTP_CREATED); // 201 Created
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json(['status' => 'error','message' => 'Failed to Add Purchase Order. ' . $e->getMessage(),], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
     }
 
+    public function bardaanaReturn(Request $request){
+        try {
+            $rules = [
+                'purchase_book_id' => ['required', 'exists:purchase_book,id'],
+                'bardaana_quantity' => 'required|numeric|min:1',
+                'date' => 'nullable|date',
+            ];
+            
+            $validator = Validator::make($request->all(), $rules);
+            
+            if ($validator->fails()) {
+                return response()->json(['status' => 'error','message' => $validator->errors()->first(),],Response::HTTP_UNPROCESSABLE_ENTITY);// 422 Unprocessable Entity
+            }
+            DB::beginTransaction();
+            $purchaseBook = PurchaseBook::findOrFail($request->purchase_book_id);
+            $lastBardaanaDetails=$purchaseBook->purchaseBookBardaanaDetails()->latest()->first();
+            
+            if($lastBardaanaDetails->remaining_bardaana_qty>=$request->bardaana_qty){
+                $purchaseBook->purchaseBookBardaanaDetails()->create([
+                    'sup_id' => $purchaseBook->sup_id,
+                    'bardaana_entry' => $lastBardaanaDetails->bardaana_entry,
+                    'bardaana_type' => 'return',
+                    'total_bardaana_qty' => $lastBardaanaDetails->total_bardaana_qty,
+                    'bardaana_qty' => $request->bardaana_quantity,
+                    'remaining_bardaana_qty' => $lastBardaanaDetails->remaining_bardaana_qty-$request->bardaana_quantity,
+                    'bardaana_paid_amt' => 0,
+                    'date' => $request->input('date', now()),
+                    'user_id' => auth()->id(),
+                    'season_id' => $purchaseBook->season_id
+                ]);
+
+                DB::commit();
+                return response()->json(['status' => 'success','message' => 'Bardaana Return Added Successfully.'], Response::HTTP_CREATED); // 201 Created
+            }else{
+                DB::rollBack();
+                return response()->json(['status' => 'error','message' => 'Remaining Bardaana Quantity Is Not Sufficient.'], Response::HTTP_UNPROCESSABLE_ENTITY); // 422 Unprocessable Entity
+            }
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error','message' => 'Failed to Add Bardaana Return. ' . $e->getMessage(),], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+        }
+    }
+
+    public function bardaanaReturnList(){
+        $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING,'season:id,name','purchaseBookBardaanaDetails'])
+        ->whereHas('purchaseBookBardaanaDetails', function ($query) {
+            $query->where('bardaana_type', 'return')->orderBy('id','desc');
+        })->get();
+        return response()->json(['data' => $purchase_book]);
+    }
     /**
      * Display the specified resource.
      *
@@ -262,11 +379,19 @@ class PurchaseBookController extends Controller
     public function show($id)
     {
         try {
-            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING,'season:id,name'])->findOrFail($id);
+            $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING,'season:id,name','purchaseBookBardaanaDetails'])->findOrFail($id);
             return response()->json(['data' => $purchase_book]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status'=>'error', 'message' => 'Purchase Order Not Found.'], Response::HTTP_NOT_FOUND);
         }
+    }
+
+    public function bardaanaJamaList(){
+        $purchase_book = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING,'season:id,name','purchaseBookBardaanaDetails'])
+        ->whereHas('purchaseBookBardaanaDetails', function ($query) {
+            $query->where('remaining_bardaana_qty', '>', 0)->orderBy('id','desc');
+        })->get();
+        return response()->json(['data' => $purchase_book]);
     }
 
     /**

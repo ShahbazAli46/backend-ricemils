@@ -230,7 +230,8 @@ class InvestorLedgerController extends Controller
                 'status' => 'success',
                 'message' => 'Investor Ledger Created Successfully.',
                 'investor'  => $investor,
-                'ledger' => $last_4_ledger
+                'ledger' => $last_4_ledger,
+                'data' => $res
             ], Response::HTTP_CREATED); // 201 Created
         } catch (Exception $e) {
             DB::rollBack();

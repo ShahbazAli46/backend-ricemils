@@ -18,7 +18,12 @@ class PurchaseBook extends Model
        'total_amount','date','payment_type','cash_amount','cheque_amount','cheque_no','cheque_date','transection_id',
        'net_amount','rem_amount','description','user_id','season_id'
     ];
-            
+    
+    public function purchaseBookBardaanaDetails()
+    {
+        return $this->hasMany(PurchaseBookBardaanaDetails::class);
+    }
+
     // Define the relationship with the Product model
     public function product()
     {

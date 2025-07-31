@@ -58,6 +58,10 @@ Route::middleware('auth:sanctum')->group( function () {
     // Route::post('/expense/{id}', [ExpenseController::class, 'update']);
     
     Route::apiResource('purchase_book', PurchaseBookController::class);
+    Route::get('purchase_book/bardaana_jama/list', [PurchaseBookController::class, 'bardaanaJamaList']);
+    Route::post('purchase_book/bardaana/return', [PurchaseBookController::class, 'bardaanaReturn']);
+    Route::get('purchase_book/bardaana_return/list', [PurchaseBookController::class, 'bardaanaReturnList']);
+    
     // Route::post('/purchase_book/{id}', [PurchaseBookController::class, 'update']);
     
     // Route::apiResource('supplier_ledger', SupplierLedgerController::class);
@@ -71,7 +75,6 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::get('/paid_party_amount', [PartyLedgerController::class, 'paidPartyAmount']);
     Route::get('/received_party_amount', [PartyLedgerController::class, 'receivedPartyAmount']);
     Route::post('/party_ledger/{id}', [PartyLedgerController::class, 'update']);
-
 
     Route::get('/sale_book/get_next_ref_no', [SaleBookController::class, 'getNextRefNo']);
     Route::post('/sale_book/add_item', [SaleBookController::class, 'AddItem']);
@@ -101,6 +104,7 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::get('/cr/api', [DashboardController::class, 'crApi']);
 
     Route::get('/overall/amt_info', [DashboardController::class, 'getOverallAmtInfo']);
+
     Route::apiResource('company_ledger', CompanyLedgerController::class);
 });
 
