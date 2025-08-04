@@ -147,6 +147,7 @@ class PurchaseBookController extends Controller
                 'sup_id' => $request->sup_id,
                 'pro_id' => $request->pro_id,
                 'bardaana_type' => $request->bardaana_type,
+                'bardaana_entry' => $request->bardaana_entry,
                 'truck_no' => $request->truck_no,
                 'net_weight' => $request->net_weight,
                 'khoot' => $request->khoot,
@@ -361,6 +362,22 @@ class PurchaseBookController extends Controller
             DB::rollBack();
             return response()->json(['status' => 'error','message' => 'Failed to Add Bardaana Return. ' . $e->getMessage(),], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
+    }
+
+    public function bardaanaPaidAsCashOrLedger(Request $request){
+        $purchase_books = PurchaseBook::with(['product:id,product_name','party:id,person_name','user:'. User::SELECT_BASIC_STRING,'season:id,name'])
+        ->whereIn('bardaana_type',['paid_as_cash','paid_as_ledger']);
+
+        if($request->has('start_date') && $request->has('end_date')){
+            $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+
+            $purchase_books = $purchase_books->whereBetween('date', [$startDate, $endDate])->get();
+            return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $purchase_books]);
+        }else{
+            $purchase_books = $purchase_books->get();
+            return response()->json(['data' => $purchase_books]);
+        }        
     }
 
     public function bardaanaReturnList(){

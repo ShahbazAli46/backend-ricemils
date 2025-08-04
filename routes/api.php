@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::get('purchase_book/bardaana_jama/list', [PurchaseBookController::class, 'bardaanaJamaList']);
     Route::post('purchase_book/bardaana/return', [PurchaseBookController::class, 'bardaanaReturn']);
     Route::get('purchase_book/bardaana_return/list', [PurchaseBookController::class, 'bardaanaReturnList']);
+    Route::get('purchase_book/bardaana_paid_as/cash_or_ledger', [PurchaseBookController::class, 'bardaanaPaidAsCashOrLedger']);
     
     // Route::post('/purchase_book/{id}', [PurchaseBookController::class, 'update']);
     

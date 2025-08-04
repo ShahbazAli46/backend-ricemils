@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -34,6 +35,8 @@ class ExpenseCategoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'expense_category' => 'required|string|max:100|unique:expense_categories',
+            'opening_expense' => 'nullable|numeric|min:0',
+            'season_id' => ['nullable', 'exists:season_summaries,id'],
         ]);
         
         if ($validator->fails()) {
@@ -47,11 +50,24 @@ class ExpenseCategoryController extends Controller
             $expense_category = ExpenseCategory::create([
                 'expense_category' => $request->input('expense_category'),
             ]);
-    
+            
+            if($request->filled('opening_expense') && $request->opening_expense > 0){
+                $expense=Expense::create([
+                    'expense_category_id' => $expense_category->id,
+                    'payment_type' => 'cash',
+                    'description' => 'Opening Expense',
+                    'cash_amount' => $request->opening_expense,
+                    'date' => now(),
+                    'total_amount'=>$request->opening_expense,
+                    'user_id' => auth()->id(),
+                    'season_id' => $request->input('season_id',null)
+                ]);
+            }
+            
             return response()->json(['status' => 'success','message' => 'Expense Category Created Successfully.',], Response::HTTP_CREATED); // 201 Created
         } catch (Exception $e) {
             return response()->json(['status' => 'error','message' => 'Failed to Create Expense Category. ' . $e->getMessage(),], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
-        }
+        } 
     }
 
     /**
