@@ -78,4 +78,72 @@ class SelfPaymentController extends Controller
             return response()->json(['status' => 'error','message' => 'Failed to Add Self Payment.' . $e->getMessage(),], 500); 
         }
     }
+
+    public function bankToBankTransfer(Request $request)
+    {
+        $rules = [
+            'from_bank_id' => ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')],
+            'to_bank_id' => ['required', 'exists:banks,id', new ExistsNotSoftDeleted('banks')],
+            'amount'  => ['required','numeric','not_in:0', new CheckBankBalance($request->input('from_bank_id'))],
+            'description' => 'nullable|string',
+            'transection_id' => 'nullable|string',
+        ];
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error','message' => $validator->errors()->first(),],422);// 422 Unprocessable Entity
+        }
+        
+        if($request->from_bank_id == $request->to_bank_id){
+            return response()->json(['status' => 'error','message' => 'From Bank and To Bank cannot be same.'],422);
+        }
+
+        try {
+            DB::beginTransaction();
+            
+            $party = Customer::firstOrCreate(
+                ['customer_type' => 'self'], // Search criteria
+                [
+                    'person_name' => 'Gulam Bari', // Required default values
+                    'firm_name' => 'Gulam Bari',
+                    'opening_balance' => 0,
+                    'current_balance' => 0
+                ]
+            );
+
+            $amount = $request->amount;
+            $description = $request->description;
+            $transactionId = $request->transection_id;
+        
+            // Transfer between banks
+            foreach ([
+                ['bank_id' => $request->from_bank_id, 'type' => 'dr_amount', 'entry_type' => 'dr', 'sign' => -1],
+                ['bank_id' => $request->to_bank_id, 'type' => 'cr_amount', 'entry_type' => 'cr', 'sign' => 1],
+            ] as $entry) {
+                $bank = Bank::find($entry['bank_id']);
+                $bank->balance += $entry['sign'] * $amount;
+                $bank->save();
+        
+                $bank->addBankTransection([
+                    'bank_id'        => $entry['bank_id'],
+                    'description'    => $description,
+                    'payment_type'   => 'online',
+                    'entry_type'     => $entry['entry_type'],
+                    'online_amount'  => $amount,
+                    $entry['type']   => $amount,
+                    'transection_id' => $transactionId,
+                    'linkable_id'    => $party->id,
+                    'linkable_type'  => Customer::class,
+                    'link_name'      => 'bank_to_bank_self',
+                    'balance'        => $bank->balance,
+                ]);
+            }
+
+            DB::commit();
+            return response()->json(['status' => 'success','message' => 'Payment Transferred Successfully from Bank to Bank.',],); // 201 Created
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error','message' => 'Failed to Add Self Payment.' . $e->getMessage(),], 500); 
+        }
+    }
+
 }

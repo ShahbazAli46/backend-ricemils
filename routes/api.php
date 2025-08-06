@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::get('/advance_cheque/is_deferred/{id}/{value}', [AdvanceChequeController::class, 'changeStatus'])->where('value', '0|1');
     
     Route::post('/self_payment/bank_to_cash', [SelfPaymentController::class, 'bankToCashTransfer']);
+    Route::post('/self_payment/bank_to_bank', [SelfPaymentController::class, 'bankToBankTransfer']);
 
 
     Route::get('/dr/api', [DashboardController::class, 'drApi']);
