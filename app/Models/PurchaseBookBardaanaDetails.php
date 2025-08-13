@@ -12,7 +12,9 @@ class PurchaseBookBardaanaDetails extends Model
 
     protected $fillable = [
        'purchase_book_id', 'sup_id','bardaana_entry', 'bardaana_type','total_bardaana_qty',
-       'bardaana_qty','remaining_bardaana_qty','bardaana_paid_amt','date','user_id','season_id'
+       'bardaana_qty','remaining_bardaana_qty','bardaana_paid_amt','date','user_id','season_id',
+       'total_bardaana_qty_tora','bardaana_qty_tora','remaining_bardaana_qty_tora','total_bardaana_qty_bori',
+       'bardaana_qty_bori','remaining_bardaana_qty_bori',
     ];
 
     public function purchaseBook()

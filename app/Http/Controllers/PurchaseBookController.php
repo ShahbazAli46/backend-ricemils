@@ -61,6 +61,9 @@ class PurchaseBookController extends Controller
             'bardaana_amount' => 'nullable|numeric|min:0',
             'total_bardaana_quantity' => 'required|numeric|min:1',
             'bardaana_quantity' => 'required|numeric|min:0',
+            
+            'bardaana_quantity_tora' => 'required|numeric|min:0',
+            'bardaana_quantity_bori' => 'required|numeric|min:0',
 
             'truck_no' => 'nullable|string|max:50',
             'net_weight' => 'required|numeric|min:1',
@@ -156,6 +159,8 @@ class PurchaseBookController extends Controller
                 'bardaana_amount' => $request->filled('bardaana_amount')?$request->bardaana_amount:0,
                 'final_weight' => $final_weight,
                 'bardaana_quantity' => $request->total_bardaana_quantity,
+                'bardaana_quantity_tora' => $request->input('bardaana_quantity_tora',0),
+                'bardaana_quantity_bori' => $request->input('bardaana_quantity_bori',0),
                 'weight_per_bag' => $weight_per_bag,
                 'freight' => $request->freight,
                 'price' => $price,
@@ -181,7 +186,6 @@ class PurchaseBookController extends Controller
                 DB::rollBack();
                 return response()->json(['status' => 'error','message' => 'Failed to Add Purchase Order.',], Response::HTTP_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             }
-            
 
             SeasonSummary::where('id', $request->season_id)->increment('purchase_amount', $purchaseBook->total_amount);
 
@@ -227,6 +231,14 @@ class PurchaseBookController extends Controller
                     'total_bardaana_qty' => $request->bardaana_quantity,
                     'bardaana_qty' => $request->bardaana_quantity,
                     'remaining_bardaana_qty' => $request->bardaana_quantity,
+                    
+                    'total_bardaana_qty_tora' => $request->input('bardaana_quantity_tora',0),
+                    'bardaana_qty_tora' => $request->input('bardaana_quantity_tora',0),
+                    'remaining_bardaana_qty_tora' => $request->input('bardaana_quantity_tora',0),
+                    'total_bardaana_qty_bori' => $request->input('bardaana_quantity_bori',0),
+                    'bardaana_qty_bori' => $request->input('bardaana_quantity_bori',0),
+                    'remaining_bardaana_qty_bori' => $request->input('bardaana_quantity_bori',0),
+
                     'bardaana_paid_amt' => 0,
                     'date' => $request->input('date', now()),
                     'user_id' => auth()->id(),
@@ -326,6 +338,8 @@ class PurchaseBookController extends Controller
             $rules = [
                 'purchase_book_id' => ['required', 'exists:purchase_book,id'],
                 'bardaana_quantity' => 'required|numeric|min:1',
+                'bardaana_quantity_tora' => ['nullable', 'numeric', 'min:0', 'required_without:bardaana_quantity_bori'],
+                'bardaana_quantity_bori' => ['nullable', 'numeric', 'min:0', 'required_without:bardaana_quantity_tora'],
                 'date' => 'nullable|date',
             ];
             
@@ -346,6 +360,15 @@ class PurchaseBookController extends Controller
                     'total_bardaana_qty' => $lastBardaanaDetails->total_bardaana_qty,
                     'bardaana_qty' => $request->bardaana_quantity,
                     'remaining_bardaana_qty' => $lastBardaanaDetails->remaining_bardaana_qty-$request->bardaana_quantity,
+
+                    'total_bardaana_qty_tora' => $lastBardaanaDetails->total_bardaana_qty_tora,
+                    'bardaana_qty_tora' => $request->input('bardaana_quantity_tora',0),
+                    'remaining_bardaana_qty_tora' => $lastBardaanaDetails->remaining_bardaana_qty_tora-$request->input('bardaana_quantity_tora',0),
+
+                    'total_bardaana_qty_bori' => $lastBardaanaDetails->total_bardaana_qty_bori,
+                    'bardaana_qty_bori' => $request->input('bardaana_quantity_bori',0),
+                    'remaining_bardaana_qty_bori' => $lastBardaanaDetails->remaining_bardaana_qty_bori-$request->input('bardaana_quantity_bori',0),
+
                     'bardaana_paid_amt' => 0,
                     'date' => $request->input('date', now()),
                     'user_id' => auth()->id(),
