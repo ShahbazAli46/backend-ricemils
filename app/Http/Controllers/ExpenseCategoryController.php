@@ -21,7 +21,15 @@ class ExpenseCategoryController extends Controller
      */
     public function index()
     {
-        $expense_categories = ExpenseCategory::withSum('expenses', 'total_amount')->get();
+        // $expense_categories = ExpenseCategory::withSum('expenses', 'total_amount')->get();
+        $expense_categories = ExpenseCategory::query()
+        ->withSum([
+            'expenses as total_add' => fn($q) => $q->where('expense_entry_type', 'add'),
+        ], 'total_amount')
+        ->withSum([
+            'expenses as total_return' => fn($q) => $q->where('expense_entry_type', 'return'),
+        ], 'total_amount')
+        ->get();
         return response()->json(['data' => $expense_categories]); 
     }
 
@@ -87,13 +95,21 @@ class ExpenseCategoryController extends Controller
                 ->with(['expenses' => function ($query) use ($startDate, $endDate) {
                     $query->with(['user:'. User::SELECT_BASIC_STRING])->whereBetween('created_at', [$startDate, $endDate]);
                 }])
-                ->withSum(['expenses' => function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('created_at', [$startDate, $endDate]);
-                }], 'total_amount')
+                ->withSum([
+                    'expenses as total_add' => fn($q)  => $q->where('expense_entry_type', 'add')->whereBetween('created_at', [$startDate, $endDate]),
+                ], 'total_amount')
+                ->withSum([
+                    'expenses as total_return' => fn($q) => $q->where('expense_entry_type', 'return')->whereBetween('created_at', [$startDate, $endDate]),
+                ], 'total_amount')
                 ->firstOrFail(); 
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $expense_category]);
             }else{
-                $expense_category = ExpenseCategory::withSum('expenses', 'total_amount')->with(['expenses.user:'. User::SELECT_BASIC_STRING])->findOrFail($id);
+                $expense_category = ExpenseCategory::withSum([
+                        'expenses as total_add' => fn($q) => $q->where('expense_entry_type', 'add'),
+                    ], 'total_amount')
+                    ->withSum([
+                        'expenses as total_return' => fn($q) => $q->where('expense_entry_type', 'return'),
+                    ], 'total_amount')->with(['expenses.user:'. User::SELECT_BASIC_STRING])->findOrFail($id);
                 return response()->json(['data' => $expense_category]);
             }
         } catch (ModelNotFoundException $e) {

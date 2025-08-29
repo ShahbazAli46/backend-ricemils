@@ -14,7 +14,7 @@ class Expense extends Model
 
     protected $fillable = [
          'bank_id','expense_category_id','total_amount','payment_type',
-         'cash_amount','cheque_amount','cheque_no','cheque_date','transection_id','description','user_id','season_id'
+         'cash_amount','cheque_amount','cheque_no','cheque_date','transection_id','description','user_id','season_id','expense_entry_type'
     ];
 
     public function expenseCategory()

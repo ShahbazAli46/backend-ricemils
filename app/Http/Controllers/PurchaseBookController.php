@@ -260,7 +260,8 @@ class PurchaseBookController extends Controller
                     'date' => $request->input('date', now()),
                     'total_amount'=>$bardaana_amt,
                     'user_id' => auth()->id(),
-                    'season_id' => $request->season_id
+                    'season_id' => $request->season_id,
+                    'expense_entry_type'=>'add'
                 ]);
 
                 //company ledger

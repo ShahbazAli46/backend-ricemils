@@ -113,17 +113,28 @@ class DashboardController extends Controller
             $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
             
-            $expense_categories = $expense_categories->withSum(['expenses' => function ($query) use ($startDate, $endDate, $request) {
-                    $query->whereBetween('created_at', [$startDate, $endDate]);
-                    if($request->has('season_id')){
-                        $query->where('season_id', $request->season_id);
-                    }
-                }], 'total_amount')->get(); 
+            $expense_categories = $expense_categories->withSum(['expenses as total_add' => function ($query) use ($startDate, $endDate, $request) {
+                $query->whereBetween('created_at', [$startDate, $endDate])->where('expense_entry_type', 'add');
+                if($request->has('season_id')){
+                    $query->where('season_id', $request->season_id);
+                }
+            }], 'total_amount')
+            ->withSum(['expenses as total_return' => function ($query) use ($startDate, $endDate, $request) {
+                $query->whereBetween('created_at', [$startDate, $endDate])->where('expense_entry_type', 'return');
+                if($request->has('season_id')){
+                    $query->where('season_id', $request->season_id);
+                }
+            }], 'total_amount')->get(); 
 
             $data['start_date'] = $startDate;
             $data['end_date'] = $endDate;
         }else{
-            $expense_categories = $expense_categories->withSum(['expenses' => function ($query) use ($request) {
+            $expense_categories = $expense_categories->withSum(['expenses as total_add' => function ($query) use ($request) {
+                if($request->has('season_id')){
+                    $query->where('season_id', $request->season_id);
+                }
+            }], 'total_amount')
+            ->withSum(['expenses as total_return' => function ($query) use ($request) {
                 if($request->has('season_id')){
                     $query->where('season_id', $request->season_id);
                 }
@@ -189,8 +200,10 @@ class DashboardController extends Controller
         $totalPurchaseAmt = $purchaseQuery->sum('total_amount');
         $totalSaleAmt = $saleQuery->sum('total_amount');
         $data['total_stock_in_hand_amt']= (string)($totalPurchaseAmt-$totalSaleAmt);
-
-        $data['total_expense_amt'] = $expenseQuery->sum('total_amount');
+        $data['total_expense_amt'] =(string) (
+            $expenseQuery->where('expense_entry_type','add')->sum('total_amount')
+          - $expenseQuery->where('expense_entry_type','return')->sum('total_amount')
+        );
         $data['total_bank_balance'] = Bank::sum('balance');
         return response()->json(['data' => $data]);
     }
