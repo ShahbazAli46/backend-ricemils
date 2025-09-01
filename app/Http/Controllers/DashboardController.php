@@ -130,11 +130,13 @@ class DashboardController extends Controller
             $data['end_date'] = $endDate;
         }else{
             $expense_categories = $expense_categories->withSum(['expenses as total_add' => function ($query) use ($request) {
+                $query->where('expense_entry_type', 'add');
                 if($request->has('season_id')){
                     $query->where('season_id', $request->season_id);
                 }
             }], 'total_amount')
             ->withSum(['expenses as total_return' => function ($query) use ($request) {
+                $query->where('expense_entry_type', 'return');
                 if($request->has('season_id')){
                     $query->where('season_id', $request->season_id);
                 }
