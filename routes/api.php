@@ -55,6 +55,8 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::post('/expense_category/{id}', [ExpenseCategoryController::class, 'update']);
     
     Route::apiResource('expense', ExpenseController::class);
+    Route::get('/received_expense_amount', [ExpenseController::class, 'receivedExpenseAmount']);
+
     // Route::post('/expense/{id}', [ExpenseController::class, 'update']);
     
     Route::apiResource('purchase_book', PurchaseBookController::class);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bank;
 use App\Models\CompanyLedger;
 use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\SeasonSummary;
 use App\Models\User;
 use App\Rules\CheckBankBalance;
@@ -38,6 +39,30 @@ class ExpenseController extends Controller
             return response()->json(['data' => $expense]);
         }
     }
+
+    public function receivedExpenseAmount(Request $request)
+    {   
+        $expense_returns = Expense::with(['expenseCategory:id,expense_category','bank:id,bank_name','user:'. User::SELECT_BASIC_STRING])->where('expense_entry_type','return');
+
+        if($request->has('expense_category_id')){
+            $expense_category_id=$request->expense_category_id;
+            $expense_category=ExpenseCategory::where('id',$expense_category_id)->first();
+            if($expense_category){
+                $expense_returns=$expense_returns->where('expense_category_id',$expense_category_id);
+            }
+        }
+
+        if($request->has('start_date') && $request->has('end_date')){
+            $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
+            $expense_returns = $expense_returns->whereBetween('created_at', [$startDate, $endDate])->get();
+            return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $expense_returns]);
+        }else{  
+            $expense_returns = $expense_returns->get();
+            return response()->json(['data' => $expense_returns]);
+        }
+    }
+
 
     /**
      * Store a newly created resource in storage.

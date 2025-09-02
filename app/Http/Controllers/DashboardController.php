@@ -33,7 +33,7 @@ class DashboardController extends Controller
             ->where(function($query) {
                 $query->whereIn('link_name', ['party_ledger', 'investor_ledger', 'bank_to_cash_self'])
                       ->orWhere(function($query) {
-                          $query->where('link_name', 'product_expense')->where('entry_type', 'cr');
+                          $query->whereIn('link_name', ['product_expense','expense'])->where('entry_type', 'cr');
                       });
             })->sum('cr_amount');
             $outflowSumCom = CompanyLedger::whereDate('created_at', $date)->sum('dr_amount');
@@ -71,7 +71,7 @@ class DashboardController extends Controller
             $inflowCashSum = CompanyLedger::where(function($query) {
                 $query->whereIn('link_name', ['party_ledger', 'investor_ledger', 'bank_to_cash_self'])
                       ->orWhere(function($query) {
-                          $query->where('link_name', 'product_expense')->where('entry_type', 'cr');
+                          $query->whereIn('link_name', ['product_expense','expense'])->where('entry_type', 'cr');
                       });
             })->sum('cr_amount');
             $outflowSumCom = CompanyLedger::sum('dr_amount');

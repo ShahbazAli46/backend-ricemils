@@ -62,8 +62,8 @@ class PurchaseBookController extends Controller
             'total_bardaana_quantity' => 'required|numeric|min:1',
             'bardaana_quantity' => 'required|numeric|min:0',
             
-            'bardaana_quantity_tora' => 'required|numeric|min:0',
-            'bardaana_quantity_bori' => 'required|numeric|min:0',
+            'bardaana_quantity_tora' => ['nullable', 'numeric', 'min:0', 'required_without:bardaana_quantity_bori'],
+            'bardaana_quantity_bori' => ['nullable', 'numeric', 'min:0', 'required_without:bardaana_quantity_tora'],
 
             'truck_no' => 'nullable|string|max:50',
             'net_weight' => 'required|numeric|min:1',
@@ -161,6 +161,7 @@ class PurchaseBookController extends Controller
                 'bardaana_quantity' => $request->total_bardaana_quantity,
                 'bardaana_quantity_tora' => $request->input('bardaana_quantity_tora',0),
                 'bardaana_quantity_bori' => $request->input('bardaana_quantity_bori',0),
+
                 'weight_per_bag' => $weight_per_bag,
                 'freight' => $request->freight,
                 'price' => $price,

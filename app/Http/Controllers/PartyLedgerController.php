@@ -98,7 +98,7 @@ class PartyLedgerController extends Controller
                 $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
                 $party_ledger = CustomerLedger::with(['customer:id,person_name,customer_type','bank:id,bank_name','user:'. User::SELECT_BASIC_STRING])->whereIn('customer_type',['party','investor'])->whereIn('entry_type', ['dr'])->whereNull('book_id')->whereBetween('created_at', [$startDate, $endDate])->get();
                 return response()->json(['start_date'=>$startDate,'end_date'=>$endDate,'data' => $party_ledger]);
-            }else{
+            }else{  
                 $party_ledger =CustomerLedger::with(['customer:id,person_name,customer_type','bank:id,bank_name','user:'. User::SELECT_BASIC_STRING])->whereIn('entry_type', ['dr'])->whereNull('book_id')->whereIn('customer_type',['party','investor'])->get();
                 return response()->json(['data' => $party_ledger]);
             }
